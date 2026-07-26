@@ -10,7 +10,7 @@ CHANNEL_LINK = "https://t.me/+L3n_ZyA2NsBiOTEx"
 PRICE_USDT = 10
 
 bot = Bot(token=TOKEN)
-app = Flask(name)
+app = Flask(__name__)
 
 def generate_invoice(user_id):
     url = "https://api.crypt.bot/v1/createInvoice"
