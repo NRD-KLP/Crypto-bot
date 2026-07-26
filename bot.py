@@ -4,8 +4,8 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 
 TOKEN = os.environ.get("TOKEN")
-CRYPTOBOT_API = "614286:AAjNa1PW2juok3ANcHc9zcjHTHx5ty3sJ4R"  # ВСТАВЬ СЮДА
-CHANNEL_LINK = "https://t.me/+L3n_ZyA2NsBiOTEx"     # ВСТАВЬ ССЫЛКУ
+CRYPTOBOT_API = "614286:AAjNa1PW2juok3ANcHc9zcjHTHx5ty3sJ4R"
+CHANNEL_LINK = "https://t.me/+L3n_ZyA2NsBiOTEx"
 PRICE_USDT = 10
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -19,7 +19,6 @@ async def buy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     url = "https://api.crypt.bot/v1/createInvoice"
     
-    # Данные для запроса
     data = {
         "asset": "USDT",
         "amount": PRICE_USDT,
@@ -27,20 +26,10 @@ async def buy(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "payload": str(user_id)
     }
     
-    # Заголовки (ОПРЕДЕЛЕНЫ!)
     headers = {
         "Crypto-Pay-API-Token": CRYPTOBOT_API
     }
     
-    try:
-    response = requests.post(url, data=data, headers=headers, timeout=30)
-    
-    # ВЫВОДИМ СЫРЫЕ ДАННЫЕ ДЛЯ ДИАГНОСТИКИ
-    await update.message.reply_text(f"📦 Статус: {response.status_code}")
-    await update.message.reply_text(f"📄 Текст ответа: {response.text[:200]}")  # Первые 200 символов
-    
-    result = response.json()
-    # ... остальной код
     try:
         response = requests.post(url, data=data, headers=headers, timeout=30)
         result = response.json()
@@ -59,7 +48,6 @@ async def buy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     except Exception as e:
         await update.message.reply_text(f"❌ Ошибка: {e}")
-    
 
 if __name__ == "__main__":
     app = Application.builder().token(TOKEN).build()
