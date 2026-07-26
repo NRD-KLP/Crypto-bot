@@ -17,7 +17,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def buy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
-    url = "https://api.crypt.bot/v1/createInvoice"
+    url = "https://pay.crypt.bot/api/createInvoice"
 
     data = {
         "asset": "USDT",
