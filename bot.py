@@ -33,6 +33,9 @@ async def buy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.post(url, json=data, headers=headers)
+            print("STATUS:", response.status-code)
+            print("TEXT:", response.text)
+            response.raise_for_status()
             result = response.json()
             
             if result.get("ok"):
