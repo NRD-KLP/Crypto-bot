@@ -1,31 +1,68 @@
-from telegram import Update
-from telegram.ext import Application, CommandHandler
+import os
+import requests
+from flask import Flask, request
+from telegram import Update, Bot
+from telegram.ext import Dispatcher, CommandHandler
 
-TOKEN = "8763839339:AAHIaHNS_6pSagwem9hUBeE28zfTQi0yV1o"
+TOKEN = os.environ.get("TOKEN")
+CRYPTOBOT_API = "614206:AAmy1rmkZ3TOznUGJwcIJ9LfX7CnZCsjNc8"  # ВСТАВЬ СЮДА
+CHANNEL_LINK = "https://t.me/+L3n_ZyA2NsBiOTEx"    # ВСТАВЬ ССЫЛКУ НА КАНАЛ
+PRICE_USDT = 10
 
-async def start(update: Update, context):
-    await update.message.reply_text(
-        "Привет! Твой бот работает.\n"
-        "Пиши /help для списка команд."
+bot = Bot(token=TOKEN)
+app = Flask(name)
+
+def generate_invoice(user_id):
+    url = "https://api.crypt.bot/v1/createInvoice"
+    data = {
+        "asset": "USDT",
+        "amount": PRICE_USDT,
+        "description": f"Доступ к каналу для {user_id}",
+        "payload": str(user_id)
+    }
+    response = requests.post(url, data=data, headers={"Crypto-Pay-API-Token": CRYPTOBOT_API})
+    return response.json().get("result", {}).get("pay_url")
+
+@app.route("/", methods=["GET", "POST"])
+def webhook():
+    if request.method == "GET":
+        return "Bot is running!"
+    if request.method == "POST":
+        update = Update.de_json(request.get_json(force=True), bot)
+        dispatcher = Dispatcher(bot, None)
+        dispatcher.add_handler(CommandHandler("start", start))
+        dispatcher.add_handler(CommandHandler("buy", buy))
+        dispatcher.process_update(update)
+        return "ok"
+
+def start(update, context):
+    update.message.reply_text(
+        "🤖 Привет! Это Bit Ref 4U Bot\n"
+        "Купи доступ к закрытому каналу с сигналами:\n"
+        "Напиши /buy, чтобы оплатить 10 USDT."
     )
 
-async def help_command(update: Update, context):
-    await update.message.reply_text(
-        "/start - приветствие\n"
-        "/help - справка\n"
-        "/info - информация о боте"
+def buy(update, context):
+    user_id = update.message.from_user.id
+    pay_url = generate_invoice(user_id)
+    update.message.reply_text(
+        f"💳 Оплати 10 USDT по ссылке:\n{pay_url}\n\n"
+        "После оплаты ссылка на канал придёт автоматически."
     )
 
-async def info(update: Update, context):
-    await update.message.reply_text(
-        "Бот запущен.\n"
-        "Доступен 24/7."
-    )
+@app.route("/cryptobot", methods=["POST"])
+def cryptobot_webhook():
+    data = request.get_json()
+    if data.get("payload") and data.get("status") == "paid":
+        user_id = int(data["payload"])
+        try:
+            bot.send_message(
+                chat_id=user_id,
+                text=f"✅ Оплата получена! Твоя ссылка для входа в канал:\n{CHANNEL_LINK}"
+            )
+        except:
+            pass
+    return "ok"
 
-app = Application.builder().token(TOKEN).build()
-app.add_handler(CommandHandler("start", start))
-app.add_handler(CommandHandler("help", help_command))
-app.add_handler(CommandHandler("info", info))
-
-print("Бот запущен...")
-app.run_polling()
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
