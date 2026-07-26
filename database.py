@@ -18,11 +18,6 @@ async def init_db():
 
         await db.commit()
 
-async def post_init(app):
-    await init_db()
-
-asyncio.create_task(payment_checker(app))
-
 
 async def add_invoice(invoice_id: int, user_id: int):
     async with aiosqlite.connect(DB_NAME) as db:
