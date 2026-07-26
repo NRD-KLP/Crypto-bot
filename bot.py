@@ -5,7 +5,7 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 
 TOKEN = os.environ.get("TOKEN")
-CRYPTOBOT_API = "614206:AA8GCuCTdDCAwu4I0NDEaksYgFdwy6TfQc9"  # ВСТАВЬ СВОЙ
+CRYPTOBOT_API = "614286:AAjNa1PW2juok3ANcHc9zcjHTHx5ty3sJ4R"  # ВСТАВЬ СВОЙ
 CHANNEL_LINK = "https://t.me/+L3n_ZyA2NsBiOTEx"     # ВСТАВЬ ССЫЛКУ
 PRICE_USDT = 10
 
