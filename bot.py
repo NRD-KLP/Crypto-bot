@@ -1,17 +1,12 @@
 import os
-import asyncio
 import requests
-from flask import Flask, request
-from telegram import Update, Bot
+from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 
 TOKEN = os.environ.get("TOKEN")
 CRYPTOBOT_API = "614206:AAmy1rmkZ3TOznUGJwcIJ9LfX7CnZCsjNc8"  # ВСТАВЬ СВОЙ
 CHANNEL_LINK = "https://t.me/+L3n_ZyA2NsBiOTEx"     # ВСТАВЬ ССЫЛКУ
 PRICE_USDT = 10
-
-bot = Bot(token=TOKEN)
-app = Flask(__name__)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
@@ -42,42 +37,11 @@ async def buy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         await update.message.reply_text(f"❌ Ошибка: {e}")
 
-@app.route("/", methods=["GET", "HEAD", "POST"])
-def webhook():
-    if request.method == "GET" or request.method == "HEAD":
-        return "Bot is running!"
-    if request.method == "POST":
-        try:
-            application = Application.builder().token(TOKEN).build()
-            application.add_handler(CommandHandler("start", start))
-            application.add_handler(CommandHandler("buy", buy))
-            
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            loop.run_until_complete(application.initialize())
-            
-            update = Update.de_json(request.get_json(force=True), bot)
-            loop.run_until_complete(application.process_update(update))
-            
-            loop.run_until_complete(application.shutdown())
-            return "ok"
-        except Exception as e:
-            print(f"Ошибка: {e}")
-            return "error", 500
-
-@app.route("/cryptobot", methods=["POST"])
-def cryptobot_webhook():
-    data = request.get_json()
-    if data and data.get("payload") and data.get("status") == "paid":
-        user_id = int(data["payload"])
-        try:
-            bot.send_message(
-                chat_id=user_id,
-                text=f"✅ Оплата получена! Твоя ссылка для входа в канал:\n{CHANNEL_LINK}"
-            )
-        except:
-            pass
-    return "ok"
-
+# Запуск бота
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+    app = Application.builder().token(TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("buy", buy))
+    
+    print("Бот запущен на Render...")
+    app.run_polling()
