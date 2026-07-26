@@ -29,34 +29,36 @@ async def buy(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "description": f"Доступ к каналу для {user_id}",
         "payload": str(user_id)
     }
-    response = requests.post(url, data=data, headers={"Crypto-Pay-API-Token": CRYPTOBOT_API})
-    pay_url = response.json().get("result", {}).get("pay_url")
-    await update.message.reply_text(
-        f"💳 Оплати 10 USDT по ссылке:\n{pay_url}\n\n"
-        "После оплаты ссылка на канал придёт автоматически."
-    )
+    try:
+        response = requests.post(url, data=data, headers={"Crypto-Pay-API-Token": CRYPTOBOT_API})
+        pay_url = response.json().get("result", {}).get("pay_url")
+        if pay_url:
+            await update.message.reply_text(
+                f"💳 Оплати 10 USDT по ссылке:\n{pay_url}\n\n"
+                "После оплаты ссылка на канал придёт автоматически."
+            )
+        else:
+            await update.message.reply_text("❌ Ошибка создания счёта. Попробуй позже.")
+    except Exception as e:
+        await update.message.reply_text(f"❌ Ошибка: {e}")
 
-@app.route("/", methods=["GET", "POST"])
+@app.route("/", methods=["GET", "HEAD", "POST"])
 def webhook():
-    if request.method == "GET":
+    if request.method == "GET" or request.method == "HEAD":
         return "Bot is running!"
     if request.method == "POST":
         try:
-            # Инициализация Application
             application = Application.builder().token(TOKEN).build()
             application.add_handler(CommandHandler("start", start))
             application.add_handler(CommandHandler("buy", buy))
             
-            # ВАЖНО: Инициализируем Application
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             loop.run_until_complete(application.initialize())
             
-            # Обработка обновления
             update = Update.de_json(request.get_json(force=True), bot)
             loop.run_until_complete(application.process_update(update))
             
-            # Завершаем
             loop.run_until_complete(application.shutdown())
             return "ok"
         except Exception as e:
@@ -66,7 +68,7 @@ def webhook():
 @app.route("/cryptobot", methods=["POST"])
 def cryptobot_webhook():
     data = request.get_json()
-    if data.get("payload") and data.get("status") == "paid":
+    if data and data.get("payload") and data.get("status") == "paid":
         user_id = int(data["payload"])
         try:
             bot.send_message(
