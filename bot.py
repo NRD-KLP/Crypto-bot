@@ -5,7 +5,7 @@ TOKEN = "8763839339:AAHIaHNS_6pSagwem9hUBeE28zfTQi0yV1o"
 
 async def start(update: Update, context):
     await update.message.reply_text(
-        "Привет! Твой бот работает на Fly.io!\n"
+        "Привет! Твой бот работает.\n"
         "Пиши /help для списка команд."
     )
 
