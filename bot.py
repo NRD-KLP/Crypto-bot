@@ -1,5 +1,5 @@
 import os
-import requests
+import httpx
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 
@@ -31,21 +31,21 @@ async def buy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     }
     
     try:
-        response = requests.post(url, data=data, headers=headers, timeout=30)
-        result = response.json()
-        
-        if result.get("ok"):
-            pay_url = result.get("result", {}).get("pay_url")
-            if pay_url:
-                await update.message.reply_text(
-                    f"💳 Оплати 10 USDT по ссылке:\n{pay_url}\n\n"
-                    "После оплаты ссылка на канал придёт автоматически."
-                )
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(url, data=data, headers=headers)
+            result = response.json()
+            
+            if result.get("ok"):
+                pay_url = result.get("result", {}).get("pay_url")
+                if pay_url:
+                    await update.message.reply_text(
+                        f"💳 Оплати 10 USDT по ссылке:\n{pay_url}\n\n"
+                        "После оплаты ссылка на канал придёт автоматически."
+                    )
+                else:
+                    await update.message.reply_text("❌ Не удалось получить ссылку на оплату.")
             else:
-                await update.message.reply_text("❌ Не удалось получить ссылку на оплату.")
-        else:
-            await update.message.reply_text(f"❌ Ошибка CryptoBot: {result.get('error', 'Неизвестная ошибка')}")
-    
+                await update.message.reply_text(f"❌ Ошибка CryptoBot: {result.get('error', 'Неизвестная ошибка')}")
     except Exception as e:
         await update.message.reply_text(f"❌ Ошибка: {e}")
 
