@@ -2,11 +2,11 @@ import os
 import requests
 from flask import Flask, request
 from telegram import Update, Bot
-from telegram.ext import Dispatcher, CommandHandler
+from telegram.ext import Application, CommandHandler
 
 TOKEN = os.environ.get("TOKEN")
-CRYPTOBOT_API = "614206:AAmy1rmkZ3TOznUGJwcIJ9LfX7CnZCsjNc8"  # ВСТАВЬ СЮДА
-CHANNEL_LINK = "https://t.me/+L3n_ZyA2NsBiOTEx"    # ВСТАВЬ ССЫЛКУ НА КАНАЛ
+CRYPTOBOT_API = "614206:AAmy1rmkZ3TOznUGJwcIJ9LfX7CnZCsjNc8"
+CHANNEL_LINK = "https://t.me/+L3n_ZyA2NsBiOTEx"
 PRICE_USDT = 10
 
 bot = Bot(token=TOKEN)
@@ -29,10 +29,10 @@ def webhook():
         return "Bot is running!"
     if request.method == "POST":
         update = Update.de_json(request.get_json(force=True), bot)
-        dispatcher = Dispatcher(bot, None)
-        dispatcher.add_handler(CommandHandler("start", start))
-        dispatcher.add_handler(CommandHandler("buy", buy))
-        dispatcher.process_update(update)
+        application = Application.builder().token(TOKEN).build()
+        application.add_handler(CommandHandler("start", start))
+        application.add_handler(CommandHandler("buy", buy))
+        application.process_update(update)
         return "ok"
 
 def start(update, context):
@@ -64,5 +64,5 @@ def cryptobot_webhook():
             pass
     return "ok"
 
-if __name__ == "__main__":
+if name == "main":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
