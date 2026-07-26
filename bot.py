@@ -31,26 +31,19 @@ async def buy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     }
     
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(url, json=data, headers=headers)
-            print("STATUS:", response.status-code)
-            print("TEXT:", response.text)
-            response.raise_for_status()
-            result = response.json()
-            
-            if result.get("ok"):
-                pay_url = result.get("result", {}).get("pay_url")
-                if pay_url:
-                    await update.message.reply_text(
-                        f"💳 Оплати 10 USDT по ссылке:\n{pay_url}\n\n"
-                        "После оплаты ссылка на канал придёт автоматически."
-                    )
-                else:
-                    await update.message.reply_text("❌ Не удалось получить ссылку на оплату.")
-            else:
-                await update.message.reply_text(f"❌ Ошибка CryptoBot: {result.get('error', 'Неизвестная ошибка')}")
-    except Exception as e:
-        await update.message.reply_text(f"❌ Ошибка: {e}")
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        response = await client.post(
+            url,
+            json=data,
+            headers=headers
+        )
+
+        await update.message.reply_text(
+            f"HTTP {response.status_code}\n\n{response.text[:300]}"
+        )
+
+except Exception as e:
+    await update.message.reply_text(repr(e))
 
 if __name__ == "__main__":
     app = Application.builder().token(TOKEN).build()
