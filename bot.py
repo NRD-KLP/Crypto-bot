@@ -1,7 +1,7 @@
 import os
 import asyncio
 import requests
-from flask import Flask, request, jsonify
+from flask import Flask, request
 from telegram import Update, Bot
 from telegram.ext import Application, CommandHandler, ContextTypes
 
@@ -42,13 +42,22 @@ def webhook():
         return "Bot is running!"
     if request.method == "POST":
         try:
-            update_data = request.get_json(force=True)
-            update = Update.de_json(update_data, bot)
+            # Инициализация Application
             application = Application.builder().token(TOKEN).build()
             application.add_handler(CommandHandler("start", start))
             application.add_handler(CommandHandler("buy", buy))
-            # Запускаем асинхронную обработку
-            asyncio.run(application.process_update(update))
+            
+            # ВАЖНО: Инициализируем Application
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(application.initialize())
+            
+            # Обработка обновления
+            update = Update.de_json(request.get_json(force=True), bot)
+            loop.run_until_complete(application.process_update(update))
+            
+            # Завершаем
+            loop.run_until_complete(application.shutdown())
             return "ok"
         except Exception as e:
             print(f"Ошибка: {e}")
