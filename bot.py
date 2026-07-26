@@ -32,7 +32,7 @@ async def buy(update: Update, context: ContextTypes.DEFAULT_TYPE):
         invoice_id = invoice["invoice_id"]
         pay_url = invoice["pay_url"]
 
-        add_invoice(invoice_id, user.id)
+        await add_invoice(invoice_id, user.id)
 
         await update.message.reply_text(
             "💳 Счёт успешно создан!\n\n"
