@@ -1,5 +1,6 @@
 FROM python:3.10
 WORKDIR /app
+COPY reqiurements.txt .
+RUN pip install -r requirements.txt
 COPY bot.py .
-RUN pip install python-telegram-bot
 CMD ["python", "bot.py"]
