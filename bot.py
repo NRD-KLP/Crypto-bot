@@ -1,6 +1,6 @@
 import asyncio
 from telegram import Update
-from database import init_db
+from database import init_db, add_invoice
 from checker import payment_checker
 from telegram.ext import (
     Application,
@@ -10,7 +10,6 @@ from telegram.ext import (
 
 from config import TOKEN, PRICE_USDT
 from cryptopay import create_invoice
-from database import add_invoice
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -47,7 +46,10 @@ async def buy(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def post_init(app):
-    asyncio.create_task(payment_checker(app))
+    await init_db()
+
+    task = asyncio.create_task(payment_checker(app))
+    app.bot_data["payment_checker_task"] = task
 
 
 def main():
