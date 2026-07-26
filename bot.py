@@ -4,6 +4,7 @@ import requests
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 
+PROXY = "137.66.1.45:80"
 TOKEN = os.environ.get("TOKEN")
 CRYPTOBOT_API = "614286:AAjNa1PW2juok3ANcHc9zcjHTHx5ty3sJ4R"  # ВСТАВЬ СВОЙ
 CHANNEL_LINK = "https://t.me/+L3n_ZyA2NsBiOTEx"     # ВСТАВЬ ССЫЛКУ
@@ -28,7 +29,7 @@ async def buy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     for attempt in range(3):
         try:
-            response = requests.post(url, data=data, headers={"Crypto-Pay-API-Token": CRYPTOBOT_API}, timeout=30)
+            response = requests.post(url, data=data, headers=headers, proxies={"htttp": PROXY, "https": PROXY}, timeout=30)
             if response.status_code == 200:
                 result = response.json()
                 if result.get("ok"):
