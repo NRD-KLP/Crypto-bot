@@ -18,7 +18,7 @@ async def help_command(update: Update, context):
 
 async def info(update: Update, context):
     await update.message.reply_text(
-        "Бот запущен на бесплатном хостинге Fly.io.\n"
+        "Бот запущен.\n"
         "Доступен 24/7."
     )
 
