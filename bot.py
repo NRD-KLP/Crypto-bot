@@ -18,32 +18,32 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def buy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     url = "https://api.crypt.bot/v1/createInvoice"
-    
+
     data = {
         "asset": "USDT",
         "amount": PRICE_USDT,
         "description": f"Доступ к каналу для {user_id}",
         "payload": str(user_id)
     }
-    
+
     headers = {
         "Crypto-Pay-API-Token": CRYPTOBOT_API
     }
-    
+
     try:
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        response = await client.post(
-            url,
-            json=data,
-            headers=headers
-        )
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                url,
+                json=data,
+                headers=headers
+            )
 
-        await update.message.reply_text(
-            f"HTTP {response.status_code}\n\n{response.text[:300]}"
-        )
+            await update.message.reply_text(
+                f"HTTP {response.status_code}\n\n{response.text[:300]}"
+            )
 
-except Exception as e:
-    await update.message.reply_text(repr(e))
+    except Exception as e:
+        await update.message.reply_text(repr(e))
 
 if __name__ == "__main__":
     app = Application.builder().token(TOKEN).build()
