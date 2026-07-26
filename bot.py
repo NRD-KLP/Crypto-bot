@@ -1,12 +1,10 @@
-import time
 import os
 import requests
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 
-PROXY = "137.66.1.45:80"
 TOKEN = os.environ.get("TOKEN")
-CRYPTOBOT_API = "614286:AAjNa1PW2juok3ANcHc9zcjHTHx5ty3sJ4R"  # ВСТАВЬ СВОЙ
+CRYPTOBOT_API = "614286:AAjNa1PW2juok3ANcHc9zcjHTHx5ty3sJ4R"  # ВСТАВЬ СЮДА
 CHANNEL_LINK = "https://t.me/+L3n_ZyA2NsBiOTEx"     # ВСТАВЬ ССЫЛКУ
 PRICE_USDT = 10
 
@@ -19,7 +17,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def buy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
-    url = "http://api.crypt.bot/v1/createInvoice"
+    url = "https://api.crypt.bot/v1/createInvoice"
+    
+    # Данные для запроса
     data = {
         "asset": "USDT",
         "amount": PRICE_USDT,
@@ -27,39 +27,33 @@ async def buy(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "payload": str(user_id)
     }
     
-    for attempt in range(3):
-        try:
-            response = requests.post(url, data=data, headers=headers, proxies={"htttp": PROXY, "https": PROXY}, timeout=30)
-            if response.status_code == 200:
-                result = response.json()
-                if result.get("ok"):
-                    pay_url = result.get("result", {}).get("pay_url")
-                    if pay_url:
-                        await update.message.reply_text(
-                            f"💳 Оплати 10 USDT по ссылке:\n{pay_url}\n\n"
-                            "После оплаты ссылка на канал придёт автоматически."
-                        )
-                        return
-                    else:
-                        await update.message.reply_text("❌ Не удалось получить ссылку.")
-                        return
-                else:
-                    await update.message.reply_text(f"❌ Ошибка CryptoBot: {result.get('error', 'Неизвестная ошибка')}")
-                    return
-            else:
-                await update.message.reply_text(f"⚠️ Попытка {attempt+1}/3: статус {response.status_code}, повтор через 3 сек...")
-                time.sleep(3)
-        except Exception as e:
-            await update.message.reply_text(f"⚠️ Попытка {attempt+1}/3: ошибка {e}, повтор...")
-            time.sleep(3)
+    # Заголовки (ОПРЕДЕЛЕНЫ!)
+    headers = {
+        "Crypto-Pay-API-Token": CRYPTOBOT_API
+    }
     
-    await update.message.reply_text("❌ Не удалось соединиться с CryptoBot после 3 попыток. Попробуй позже.")
+    try:
+        response = requests.post(url, data=data, headers=headers, timeout=30)
+        result = response.json()
+        
+        if result.get("ok"):
+            pay_url = result.get("result", {}).get("pay_url")
+            if pay_url:
+                await update.message.reply_text(
+                    f"💳 Оплати 10 USDT по ссылке:\n{pay_url}\n\n"
+                    "После оплаты ссылка на канал придёт автоматически."
+                )
+            else:
+                await update.message.reply_text("❌ Не удалось получить ссылку на оплату.")
+        else:
+            await update.message.reply_text(f"❌ Ошибка CryptoBot: {result.get('error', 'Неизвестная ошибка')}")
+    
+    except Exception as e:
+        await update.message.reply_text(f"❌ Ошибка: {e}")
 
-# Запуск бота
 if __name__ == "__main__":
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("buy", buy))
-    
-    print("Бот запущен на Render...")
+    print("Бот запущен...")
     app.run_polling()
