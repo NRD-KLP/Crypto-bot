@@ -20,11 +20,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Для покупки напиши /buy"
     )
 
-async def post_init(app):
-    await init_db()
-
-asyncio.create_task(payment_checker(app))
-
 async def buy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
 
