@@ -26,16 +26,25 @@ async def buy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     }
     try:
         response = requests.post(url, data=data, headers={"Crypto-Pay-API-Token": CRYPTOBOT_API})
-        pay_url = response.json().get("result", {}).get("pay_url")
-        if pay_url:
-            await update.message.reply_text(
-                f"💳 Оплати 10 USDT по ссылке:\n{pay_url}\n\n"
-                "После оплаты ссылка на канал придёт автоматически."
-            )
+        # Проверяем статус ответа
+        if response.status_code != 200:
+            await update.message.reply_text(f"❌ Ошибка API: статус {response.status_code}")
+            return
+        # Парсим JSON
+        result = response.json()
+        if result.get("ok"):
+            pay_url = result.get("result", {}).get("pay_url")
+            if pay_url:
+                await update.message.reply_text(
+                    f"💳 Оплати 10 USDT по ссылке:\n{pay_url}\n\n"
+                    "После оплаты ссылка на канал придёт автоматически."
+                )
+            else:
+                await update.message.reply_text("❌ Не удалось получить ссылку на оплату.")
         else:
-            await update.message.reply_text("❌ Ошибка создания счёта. Попробуй позже.")
+            await update.message.reply_text(f"❌ Ошибка CryptoBot: {result.get('error', 'Неизвестная ошибка')}")
     except Exception as e:
-        await update.message.reply_text(f"❌ Ошибка: {e}")
+        await update.message.reply_text(f"❌ Критическая ошибка: {e}")
 
 # Запуск бота
 if __name__ == "__main__":
