@@ -1,5 +1,6 @@
 import asyncio
 from telegram import Update
+from database import init_db
 from checker import payment_checker
 from telegram.ext import (
     Application,
