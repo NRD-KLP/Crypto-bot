@@ -33,6 +33,15 @@ async def buy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     }
     
     try:
+    response = requests.post(url, data=data, headers=headers, timeout=30)
+    
+    # ВЫВОДИМ СЫРЫЕ ДАННЫЕ ДЛЯ ДИАГНОСТИКИ
+    await update.message.reply_text(f"📦 Статус: {response.status_code}")
+    await update.message.reply_text(f"📄 Текст ответа: {response.text[:200]}")  # Первые 200 символов
+    
+    result = response.json()
+    # ... остальной код
+    try:
         response = requests.post(url, data=data, headers=headers, timeout=30)
         result = response.json()
         
@@ -50,6 +59,7 @@ async def buy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     except Exception as e:
         await update.message.reply_text(f"❌ Ошибка: {e}")
+    
 
 if __name__ == "__main__":
     app = Application.builder().token(TOKEN).build()
