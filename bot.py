@@ -1,6 +1,5 @@
 import asyncio
 from telegram import Update
-from telegram.ext import MessageHandler, filters
 from checker import payment_checker
 from telegram.ext import (
     Application,
@@ -19,11 +18,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"Стоимость доступа: {PRICE_USDT} USDT\n\n"
         "Для покупки напиши /buy"
     )
-
-async def debug(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    print(update)
-
-app.add_handler(MessageHandler(filters.ALL, debug))
 
 
 async def buy(update: Update, context: ContextTypes.DEFAULT_TYPE):
