@@ -31,7 +31,7 @@ async def public_content_manager(app):
                     continue
 
                 market = await get_full_market()
-                text = generate_public_post(news, market)
+                text = generate_public_post(news)
 
                 await app.bot.send_message(
                     chat_id=PUBLIC_CHANNEL_ID,
@@ -62,7 +62,7 @@ async def private_content_manager(app):
                     continue
 
                 market = await get_full_market()
-                text = genarate_private_post(news, market)
+                text = genarate_private_post(news)
 
                 await app.bot.send_message(
                     chat_id=CHANNEL_ID,
