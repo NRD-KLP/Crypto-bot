@@ -22,3 +22,20 @@ async def get_market_data():
             "eth_price": data["ethereum"]["usd"],
             "eth_change": round(data["ethereum"]["usd_24h_change"], 2),
         }
+        
+async def get_fear_greed():
+    url = "https://api.alternative.me/fng/"
+
+    async with httpx.AsyncClient(timeout=10) as client:
+        response = await client.get(url)
+        response.raise_for_status()
+
+        data = response.json()
+
+        value = data["data"][0]["value"]
+        classification = data["data"][0]["value_classification"]
+
+        return {
+            "value": value,
+            "classification": classification
+        }
