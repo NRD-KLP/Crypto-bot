@@ -1,4 +1,6 @@
 import asyncio
+import threading
+from web import run_web
 from telegram import Update
 from database import init_db, add_invoice
 from checker import payment_checker
@@ -62,6 +64,8 @@ def main():
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("buy", buy))
+
+    threading.Thread(target=run_web, daemon=True).start()
 
     print("Бот запущен!")
 
