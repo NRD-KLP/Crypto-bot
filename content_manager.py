@@ -7,16 +7,39 @@ from config import (
     PRIVATE_POST_INTERVAL,
 )
 
+from sources import get_latest_news
+from post_generator import (
+    generate_public_post,
+    generate_private_post,
+)
+
+# Уже опубликованные новости
+published_news = set()
+
 
 async def public_content_manager(app):
     while True:
         try:
-            await app.bot.send_message(
-                chat_id=PUBLIC_CHANNEL_ID,
-                text="📰 Тестовый пост в открытый канал."
-            )
+            news_list = get_latest_news()
 
-            print("Public post sent.")
+            for news in news_list:
+
+                if news["link"] in published_news:
+                    continue
+
+                text = generate_public_post(news)
+
+                await app.bot.send_message(
+                    chat_id=PUBLIC_CHANNEL_ID,
+                    text=text,
+                    parse_mode="HTML"
+                )
+
+                published_news.add(news["link"])
+
+                print("Public post sent.")
+
+                break
 
         except Exception as e:
             print(f"Public manager error: {e}")
@@ -27,12 +50,26 @@ async def public_content_manager(app):
 async def private_content_manager(app):
     while True:
         try:
-            await app.bot.send_message(
-                chat_id=CHANNEL_ID,
-                text="🔒 Тестовый пост в закрытый канал."
-            )
+            news_list = get_latest_news()
 
-            print("Private post sent.")
+            for news in news_list:
+
+                if news["link"] in published_news:
+                    continue
+
+                text = generate_private_post(news)
+
+                await app.bot.send_message(
+                    chat_id=CHANNEL_ID,
+                    text=text,
+                    parse_mode="HTML"
+                )
+
+                published_news.add(news["link"])
+
+                print("Private post sent.")
+
+                break
 
         except Exception as e:
             print(f"Private manager error: {e}")
