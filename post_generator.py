@@ -1,18 +1,20 @@
-from analysis_generator import generate_analysis
+from ai_analyzer import generate_ai_analysis
+
 
 def generate_public_post(news):
     return (
         f"<b>{news['title']}</b>\n\n"
         f"{news['description']}\n\n"
-        "#Crypto"
     )
 
 
 def generate_private_post(news):
+    analysis = generate_ai_analysis(news)
+
     return (
         "🔒 <b>Bit Ref 4U | Аналитика</b>\n\n"
         f"<b>{news['title']}</b>\n\n"
         f"{news['description']}\n\n"
-        f"{generate_analysis(news)}\n\n"
-        "⚠️ <b>Не является финансовой рекомендацией.</b>"
+        f"{analysis}\n\n"
+        "⚠️ Не является финансовой рекомендацией."
     )
