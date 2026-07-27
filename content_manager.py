@@ -1,4 +1,5 @@
 import asyncio
+from database import (is_news_published, save_published_news,)
 
 from config import (
     PUBLIC_CHANNEL_ID,
@@ -14,9 +15,7 @@ from post_generator import (
 )
 
 
-# Уже опубликованные новости
-public_published_news = set()
-private_published_news = set()
+
 
 
 async def public_content_manager(app):
