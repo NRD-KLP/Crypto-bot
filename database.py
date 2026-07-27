@@ -16,6 +16,14 @@ async def init_db():
             )
         """)
 
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS published_news (
+            link TEXT PRIMARY KEY,
+            channel TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
         await db.commit()
 
 
@@ -103,4 +111,34 @@ async def delete_invoice(invoice_id: int):
             """,
             (invoice_id,)
         )
+        await db.commit()
+
+async def is_news_published(link, channel):
+    async with aiosqlite.connect(DB_NAME) as db:
+        cursor = await db.execute(
+            """
+            SELECT 1
+            FROM published_news
+            WHERE link=? AND channel=?
+            """,
+            (link, channel)
+        )
+
+        result = await cursor.fetchone()
+        await cursor.close()
+
+        return result is not None
+
+
+async def save_published_news(link, channel):
+    async with aiosqlite.connect(DB_NAME) as db:
+        await db.execute(
+            """
+            INSERT OR IGNORE INTO published_news
+            (link, channel)
+            VALUES (?, ?)
+            """,
+            (link, channel)
+        )
+
         await db.commit()
