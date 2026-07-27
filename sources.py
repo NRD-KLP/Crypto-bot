@@ -1,5 +1,7 @@
 import feedparser
 from translator import translate
+from cleaner import clean_text
+
 
 COINDESK_RSS = "https://www.coindesk.com/arc/outboundfeeds/rss/"
 COINTELEGRAPH_RSS = "https://cointelegraph.com/rss"
@@ -15,10 +17,9 @@ def get_latest_news():
 
         for entry in feed.entries[:5]:
             news.append({
-                "title": translate(entry.title),
-                "description": translate(
-        getattr(entry, "summary", "")),
-                "link": entry.link,
+                "title": clean_text(translate(entry.title)),
+
+                "description": clean_text(translate(getattr(entry, "summary", ""))),
 })
 
     return news
