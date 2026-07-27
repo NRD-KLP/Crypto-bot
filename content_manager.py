@@ -67,4 +67,13 @@ async def private_content_manager(app):
                     parse_mode="HTML"
                 )
 
-                private
+                private_published_news.add(news["link"])
+
+                print("Private post sent.")
+
+                break
+
+        except Exception as e:
+            print(f"Private manager error: {e}")
+
+        await asyncio.sleep(PRIVATE_POST_INTERVAL)
