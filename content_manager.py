@@ -1,5 +1,4 @@
 import asyncio
-from market import get_full_market
 
 from config import (
     PUBLIC_CHANNEL_ID,
