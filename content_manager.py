@@ -63,6 +63,7 @@ async def private_content_manager(app):
                 print("Trying private post:", news["title"])
 
                 text = generate_private_post(news)
+                print("Private generated:", news["title"])
 
                 await app.bot.send_message(
                     chat_id=CHANNEL_ID,
