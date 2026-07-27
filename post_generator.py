@@ -2,7 +2,6 @@ from analysis_generator import generate_analysis
 
 def generate_public_post(news):
     return (
-        "📰 <b>Крипто-новость</b>\n\n"
         f"<b>{news['title']}</b>\n\n"
         f"{news['description']}\n\n"
         "#Crypto"
