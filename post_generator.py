@@ -6,7 +6,6 @@ def generate_public_post(news):
 
 
 def generate_private_post(news):
-    analysis = generate_ai_analysis(news)
 
     return (
         "🔒 <b>Bit Ref 4U | Аналитика</b>\n\n"
