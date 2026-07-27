@@ -54,16 +54,15 @@ async def private_content_manager(app):
     while True:
         try:
             news_list = get_latest_news()
-            new_list = new_list[1:]
 
             for news in news_list:
 
                 if news["link"] in private_published_news:
                     continue
 
-                
+                print("Trying private post:", news["title"])
+
                 text = generate_private_post(news)
-                pritnt("Trying private post:", news["title"])
 
                 await app.bot.send_message(
                     chat_id=CHANNEL_ID,
