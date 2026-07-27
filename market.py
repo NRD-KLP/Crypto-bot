@@ -39,3 +39,12 @@ async def get_fear_greed():
             "value": value,
             "classification": classification
         }
+
+async def get_full_market():
+    market = await get_market_data()
+    fear_greed = await get_fear_greed()
+
+    return {
+        **market,
+        **fear_greed
+    }
