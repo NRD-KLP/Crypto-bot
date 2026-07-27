@@ -1,5 +1,5 @@
 import asyncio
-from market import get_market_data
+from market import get_full_market
 
 from config import (
     PUBLIC_CHANNEL_ID,
@@ -30,7 +30,7 @@ async def public_content_manager(app):
                 if news["link"] in public_published_news:
                     continue
 
-                market = await get_market_data()
+                market = await get_full_market()
                 text = generate_public_post(news, market)
 
                 await app.bot.send_message(
@@ -61,7 +61,7 @@ async def private_content_manager(app):
                 if news["link"] in private_published_news:
                     continue
 
-                market = await get_market_data()
+                market = await get_full_market()
                 text = genarate_private_post(news, market)
 
                 await app.bot.send_message(
