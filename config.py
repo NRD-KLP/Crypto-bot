@@ -7,6 +7,10 @@ PRICE_USDT = 10
 
 # Вставишь сюда после того, как узнаем ID канала
 CHANNEL_ID = -1004323097981
+PUBLIC_CHANNEL_ID = -1004341059359
+
+PUBLIC_POST_INTERVAL = 10800
+PRIVATE_POST_INTERVAL = 7200
 
 # Проверка оплаты каждые N секунд
 CHECK_INTERVAL = 5
