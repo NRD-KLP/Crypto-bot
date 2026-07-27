@@ -1,6 +1,3 @@
-from ai_analyzer import generate_ai_analysis
-
-
 def generate_public_post(news):
     return (
         f"<b>{news['title']}</b>\n\n"
