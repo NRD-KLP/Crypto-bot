@@ -30,7 +30,7 @@ async def public_content_manager(app):
                 if news["link"] in public_published_news:
                     continue
 
-                market = await get_full_market()
+                
                 text = generate_public_post(news)
 
                 await app.bot.send_message(
@@ -61,7 +61,7 @@ async def private_content_manager(app):
                 if news["link"] in private_published_news:
                     continue
 
-                market = await get_full_market()
+                
                 text = genarate_private_post(news)
 
                 await app.bot.send_message(
