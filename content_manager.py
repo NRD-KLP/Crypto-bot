@@ -25,8 +25,8 @@ async def public_content_manager(app):
 
             for news in news_list:
 
-                if news["link"] in public_published_news:
-                    continue
+                if await is_news_published(news["link"], "public"):
+                    continue;
 
                 
                 text = generate_public_post(news)
@@ -37,7 +37,7 @@ async def public_content_manager(app):
                     parse_mode="HTML"
                 )
 
-                public_published_news.add(news["link"])
+                await save_published_news(news["link"], "public")
 
                 print("Public post sent.")
 
@@ -56,7 +56,7 @@ async def private_content_manager(app):
 
             for news in news_list:
 
-                if news["link"] in private_published_news:
+                if await is_news_published(news["link"], "private"):
                     continue
 
                 print("Trying private post:", news["title"])
@@ -70,7 +70,7 @@ async def private_content_manager(app):
                     parse_mode="HTML"
                 )
 
-                private_published_news.add(news["link"])
+                await save_published_news(news["link"], "private")
 
                 print("Private post sent.")
 
