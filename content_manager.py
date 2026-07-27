@@ -13,8 +13,10 @@ from post_generator import (
     generate_private_post,
 )
 
+
 # Уже опубликованные новости
-published_news = set()
+public_published_news = set()
+private_published_news = set()
 
 
 async def public_content_manager(app):
@@ -24,7 +26,7 @@ async def public_content_manager(app):
 
             for news in news_list:
 
-                if news["link"] in published_news:
+                if news["link"] in public_published_news:
                     continue
 
                 text = generate_public_post(news)
@@ -35,7 +37,7 @@ async def public_content_manager(app):
                     parse_mode="HTML"
                 )
 
-                published_news.add(news["link"])
+                public_published_news.add(news["link"])
 
                 print("Public post sent.")
 
@@ -54,7 +56,7 @@ async def private_content_manager(app):
 
             for news in news_list:
 
-                if news["link"] in published_news:
+                if news["link"] in private_published_news:
                     continue
 
                 text = generate_private_post(news)
@@ -65,13 +67,4 @@ async def private_content_manager(app):
                     parse_mode="HTML"
                 )
 
-                published_news.add(news["link"])
-
-                print("Private post sent.")
-
-                break
-
-        except Exception as e:
-            print(f"Private manager error: {e}")
-
-        await asyncio.sleep(PRIVATE_POST_INTERVAL)
+                private
