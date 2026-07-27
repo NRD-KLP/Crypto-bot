@@ -54,6 +54,7 @@ async def private_content_manager(app):
     while True:
         try:
             news_list = get_latest_news()
+            new_list = new_list[1:]
 
             for news in news_list:
 
