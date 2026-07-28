@@ -11,7 +11,7 @@ from telegram.ext import (
 )
 
 from config import TOKEN, PRICE_USDT
-from content_manager import private_content_manager
+from content_manager import content_manager
 from cryptopay import create_invoice
 
 
