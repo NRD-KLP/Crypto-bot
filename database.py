@@ -1,4 +1,5 @@
-import aiosqlite
+[28.07.2026 11:19] Killian Le Paulin ️️: import aiosqlite
+import hashlib
 
 
 DB_NAME = "users.db"
@@ -18,9 +19,16 @@ async def init_db():
 
         await db.execute("""
             CREATE TABLE IF NOT EXISTS published_news (
-            link TEXT PRIMARY KEY,
-            channel TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                link TEXT PRIMARY KEY,
+                channel TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS published_texts (
+                text_hash TEXT PRIMARY KEY,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
 
@@ -113,6 +121,7 @@ async def delete_invoice(invoice_id: int):
         )
         await db.commit()
 
+
 async def is_news_published(link, channel):
     async with aiosqlite.connect(DB_NAME) as db:
         cursor = await db.execute(
@@ -139,6 +148,40 @@ async def save_published_news(link, channel):
             VALUES (?, ?)
             """,
             (link, channel)
+        )
+
+        await db.commit()
+
+
+async def is_text_published(text):
+    text_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+    async with aiosqlite.connect(DB_NAME) as db:
+        cursor = await db.execute(
+            """
+            SELECT 1
+            FROM published_texts
+            WHERE text_hash=?
+            """,
+            (text_hash,)
+        )
+[28.07.2026 11:19] Killian Le Paulin ️️: result = await cursor.fetchone()
+        await cursor.close()
+
+        return result is not None
+
+
+async def save_published_text(text):
+    text_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+    async with aiosqlite.connect(DB_NAME) as db:
+        await db.execute(
+            """
+            INSERT OR IGNORE INTO published_texts
+            (text_hash)
+            VALUES (?)
+            """,
+            (text_hash,)
         )
 
         await db.commit()
