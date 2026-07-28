@@ -13,6 +13,7 @@ from telegram.ext import (
 from config import TOKEN, PRICE_USDT
 from content_manager import content_manager
 from cryptopay import create_invoice
+from telegram.ext import MessageHandler, filters
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -56,6 +57,14 @@ async def post_init(app):
 
     private_task = asyncio.create_task(content_manager(app))
     app.bot_data["private_content_task"] = private_task
+
+async def get_photo_id(update, context):
+    if update.message.photo:
+        photo = update.message.photo[-1]
+
+        await update.message.reply_text(
+            f"FILE_ID:\n{photo.file_id}"
+        )
     
 
 
@@ -69,6 +78,12 @@ def main():
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("buy", buy))
+    application.add_handler(
+    MessageHandler(
+        filters.PHOTO,
+        get_photo_id
+    )
+)
 
     threading.Thread(target=run_web, daemon=True).start()
 
