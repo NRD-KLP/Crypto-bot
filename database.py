@@ -1,4 +1,4 @@
-[28.07.2026 11:19] Killian Le Paulin ️️: import aiosqlite
+import aiosqlite
 import hashlib
 
 
@@ -165,7 +165,7 @@ async def is_text_published(text):
             """,
             (text_hash,)
         )
-[28.07.2026 11:19] Killian Le Paulin ️️: result = await cursor.fetchone()
+    result = await cursor.fetchone()
         await cursor.close()
 
         return result is not None
