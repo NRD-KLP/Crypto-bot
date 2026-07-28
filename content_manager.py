@@ -30,7 +30,7 @@ async def content_manager(app):
                 await app.bot.send_photo(
                     chat_id=CHANNEL_ID,
                     photo=get_random_image(),
-                    text=text,
+                    caption=text,
                     parse_mode="HTML"
                 )
 
