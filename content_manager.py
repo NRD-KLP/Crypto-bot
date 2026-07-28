@@ -1,3 +1,4 @@
+import traceback
 import asyncio
 from database import (is_news_published, save_published_news,)
 
@@ -40,6 +41,7 @@ async def content_manager(app):
                 break
 
         except Exception as e:
-            print(f"Private manager error: {e}")
+            print(f"Private manager error:")
+            traceback.print_exc()
 
         await asyncio.sleep(PRIVATE_POST_INTERVAL)
