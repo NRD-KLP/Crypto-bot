@@ -12,28 +12,27 @@ BAD_PHRASES = [
 
 
 def summarize(news):
+    title = news["title"].strip()
     text = news.get("description", "")
 
     if not text:
-        return news["title"]
+        return f"<b>{title}</b>"
 
-    # HTML
+    # Удаляем HTML
     text = re.sub(r"<.*?>", "", text)
 
-    # Лишние пробелы
+    # Убираем лишние пробелы
     text = re.sub(r"\s+", " ", text).strip()
 
     # Удаляем мусорные фразы
     for phrase in BAD_PHRASES:
         text = text.replace(phrase, "")
 
-    # Если заголовок не повторяется — добавляем его в начало
-    title = news["title"].strip()
+    # Убираем повтор заголовка из описания
+    if title.lower() in text.lower():
+        text = text[len(title):].lstrip(".: -")
 
-    if title.lower() not in text.lower():
-        text = f"{title}. {text}"
-
-    # Обрезаем красиво
+    # Красиво обрезаем
     if len(text) > 350:
         text = text[:350]
 
@@ -45,4 +44,4 @@ def summarize(news):
         elif last_space > 200:
             text = text[:last_space] + "..."
 
-    return text.strip()
+    return f"<b>{title}</b>\n\n{text.strip()}"
