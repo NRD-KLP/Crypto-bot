@@ -11,7 +11,7 @@ from telegram.ext import (
 )
 
 from config import TOKEN, PRICE_USDT
-from content_manager import ( public_content_manager, private_content_manager, )
+from content_manager import private_content_manager
 from cryptopay import create_invoice
 
 
@@ -53,9 +53,6 @@ async def post_init(app):
 
     payment_task = asyncio.create_task(payment_checker(app))
     app.bot_data["payment_checker_task"] = payment_task
-
-    public_task = asyncio.create_task(public_content_manager(app))
-    app.bot_data["public_content_task"] = public_task
 
     private_task = asyncio.create_task(private_content_manager(app))
     app.bot_data["private_content_task"] = private_task
