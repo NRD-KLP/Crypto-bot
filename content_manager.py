@@ -26,9 +26,9 @@ async def content_manager(app):
                 text = generate_private_post(news)
                 print("Private generated:", news["title"])
 
-                await app.bot.send_message(
+                await app.bot.send_photo(
                     chat_id=CHANNEL_ID,
-                    photo=get_random_image()
+                    photo=get_random_image(),
                     text=text,
                     parse_mode="HTML"
                 )
