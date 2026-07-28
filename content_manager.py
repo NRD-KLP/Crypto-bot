@@ -12,7 +12,7 @@ from sources import get_latest_news
 from post_generator import generate_private_post
 
 
-async def private_content_manager(app):
+async def content_manager(app):
     while True:
         try:
             news_list = get_latest_news()
