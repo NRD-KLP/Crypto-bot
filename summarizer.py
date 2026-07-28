@@ -1,26 +1,48 @@
 import re
 
 
+BAD_PHRASES = [
+    "Read more",
+    "Continue reading",
+    "Continue Reading",
+    "Read More",
+    "Learn more",
+    "Click here",
+]
+
+
 def summarize(news):
-    text = news["description"]
+    text = news.get("description", "")
 
     if not text:
         return news["title"]
 
-    # Убираем HTML
+    # HTML
     text = re.sub(r"<.*?>", "", text)
 
-    # Убираем лишние пробелы
+    # Лишние пробелы
     text = re.sub(r"\s+", " ", text).strip()
 
-    # Если описание короткое — оставляем как есть
-    if len(text) <= 300:
-        return text
+    # Удаляем мусорные фразы
+    for phrase in BAD_PHRASES:
+        text = text.replace(phrase, "")
 
-    # Обрезаем по последнему пробелу
-    short = text[:300]
+    # Если заголовок не повторяется — добавляем его в начало
+    title = news["title"].strip()
 
-    if " " in short:
-        short = short[:short.rfind(" ")]
+    if title.lower() not in text.lower():
+        text = f"{title}. {text}"
 
-    return short + "..."
+    # Обрезаем красиво
+    if len(text) > 350:
+        text = text[:350]
+
+        last_dot = text.rfind(".")
+        last_space = text.rfind(" ")
+
+        if last_dot > 200:
+            text = text[:last_dot + 1]
+        elif last_space > 200:
+            text = text[:last_space] + "..."
+
+    return text.strip()
