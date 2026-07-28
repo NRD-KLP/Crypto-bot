@@ -8,6 +8,7 @@ from config import (
 
 from sources import get_latest_news
 from post_generator import generate_private_post
+from image_manager import get_random_image
 
 
 async def content_manager(app):
@@ -27,6 +28,7 @@ async def content_manager(app):
 
                 await app.bot.send_message(
                     chat_id=CHANNEL_ID,
+                    photo=get_random_image()
                     text=text,
                     parse_mode="HTML"
                 )
