@@ -9,10 +9,7 @@ from config import (
 )
 
 from sources import get_latest_news
-from post_generator import (
-    generate_public_post,
-    generate_private_post,
-)
+from post_generator import generate_private_post
 
 
 async def private_content_manager(app):
