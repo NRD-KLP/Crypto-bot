@@ -54,7 +54,7 @@ async def post_init(app):
     payment_task = asyncio.create_task(payment_checker(app))
     app.bot_data["payment_checker_task"] = payment_task
 
-    private_task = asyncio.create_task(private_content_manager(app))
+    private_task = asyncio.create_task(content_manager(app))
     app.bot_data["private_content_task"] = private_task
     
 
