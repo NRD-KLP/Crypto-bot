@@ -166,7 +166,7 @@ async def is_text_published(text):
             (text_hash,)
         )
     result = await cursor.fetchone()
-        await cursor.close()
+    await cursor.close()
 
         return result is not None
 
