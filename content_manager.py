@@ -2,9 +2,7 @@ import asyncio
 from database import (is_news_published, save_published_news,)
 
 from config import (
-    PUBLIC_CHANNEL_ID,
     CHANNEL_ID,
-    PUBLIC_POST_INTERVAL,
     PRIVATE_POST_INTERVAL,
 )
 
