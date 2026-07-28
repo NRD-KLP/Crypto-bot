@@ -15,40 +15,6 @@ from post_generator import (
 )
 
 
-
-
-
-async def public_content_manager(app):
-    while True:
-        try:
-            news_list = get_latest_news()
-
-            for news in news_list:
-
-                if await is_news_published(news["link"], "public"):
-                    continue;
-
-                
-                text = generate_public_post(news)
-
-                await app.bot.send_message(
-                    chat_id=PUBLIC_CHANNEL_ID,
-                    text=text,
-                    parse_mode="HTML"
-                )
-
-                await save_published_news(news["link"], "public")
-
-                print("Public post sent.")
-
-                break
-
-        except Exception as e:
-            print(f"Public manager error: {e}")
-
-        await asyncio.sleep(PUBLIC_POST_INTERVAL)
-
-
 async def private_content_manager(app):
     while True:
         try:
