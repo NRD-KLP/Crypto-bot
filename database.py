@@ -625,3 +625,35 @@ async def deactivate_subscription(
 
 
         await db.commit()
+
+# =========================
+# INVITE SENT
+# =========================
+
+async def mark_invite_sent(
+        invoice_id
+):
+
+    async with aiosqlite.connect(
+        DB_NAME
+    ) as db:
+
+        await db.execute(
+
+            """
+            UPDATE invoices
+
+            SET invite_sent = 1
+
+            WHERE invoice_id = ?
+
+            """,
+
+            (
+                invoice_id,
+            )
+
+        )
+
+
+        await db.commit()
