@@ -361,3 +361,61 @@ async def save_published_text(text_hash, channel):
         )
 
         await db.commit()
+
+async def get_user(user_id: int):
+
+    async with aiosqlite.connect(DB_NAME) as db:
+
+        cursor = await db.execute(
+            """
+            SELECT *
+            FROM users
+            WHERE user_id=?
+            """,
+            (user_id,)
+        )
+
+        row = await cursor.fetchone()
+
+        await cursor.close()
+
+        return row
+
+
+async def get_expired_subscriptions():
+
+    async with aiosqlite.connect(DB_NAME) as db:
+
+        cursor = await db.execute(
+            """
+            SELECT user_id
+            FROM users
+            WHERE is_active=1
+            AND subscription_end < CURRENT_TIMESTAMP
+            """
+        )
+
+        rows = await cursor.fetchall()
+
+        await cursor.close()
+
+        return [
+            row[0]
+            for row in rows
+        ]
+
+
+async def deactivate_subscription(user_id: int):
+
+    async with aiosqlite.connect(DB_NAME) as db:
+
+        await db.execute(
+            """
+            UPDATE users
+            SET is_active=0
+            WHERE user_id=?
+            """,
+            (user_id,)
+        )
+
+        await db.commit()
