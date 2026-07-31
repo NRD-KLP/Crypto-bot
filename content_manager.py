@@ -6,7 +6,7 @@ from database import (
 )
 
 from config import (
-    CHANNEL_ID,
+    PRIVATE_CHANNEL_ID,
     PRIVATE_POST_INTERVAL,
 )
 
@@ -46,12 +46,10 @@ async def content_manager(app):
                     continue
 
 
-
                 print(
                     "New post:",
                     news["title"]
                 )
-
 
 
                 text = generate_private_post(
@@ -59,18 +57,15 @@ async def content_manager(app):
                 )
 
 
-
                 photo = get_random_image()
 
 
-
                 await app.bot.send_photo(
-                    chat_id=CHANNEL_ID,
+                    chat_id=PRIVATE_CHANNEL_ID,
                     photo=photo,
                     caption=text,
                     parse_mode="HTML"
                 )
-
 
 
                 await save_published_news(
@@ -93,7 +88,6 @@ async def content_manager(app):
             print(
                 f"Content manager error: {e}"
             )
-
 
 
         await asyncio.sleep(
