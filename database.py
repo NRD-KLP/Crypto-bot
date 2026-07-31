@@ -697,3 +697,48 @@ async def invite_sent(
 
 
         return False
+# =========================
+# SAVE PAYMENT
+# =========================
+
+async def save_payment(
+        invoice_id,
+        user_id,
+        amount,
+        currency
+):
+
+    async with aiosqlite.connect(
+        DB_NAME
+    ) as db:
+
+        await db.execute(
+
+            """
+            UPDATE invoices
+
+            SET
+
+            status = 'paid',
+
+            amount = ?,
+
+            currency = ?
+
+            WHERE invoice_id = ?
+
+            AND user_id = ?
+
+            """,
+
+            (
+                amount,
+                currency,
+                invoice_id,
+                user_id
+            )
+
+        )
+
+
+        await db.commit()
