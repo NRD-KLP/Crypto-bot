@@ -157,6 +157,28 @@ async def deactivate_subscription(user_id: int):
 
         await db.commit()
 
+async def get_expired_subscriptions():
+
+    async with aiosqlite.connect(DB_NAME) as db:
+
+        cursor = await db.execute(
+            """
+            SELECT user_id
+            FROM users
+            WHERE is_active=1
+            AND subscription_end < CURRENT_TIMESTAMP
+            """
+        )
+
+        rows = await cursor.fetchall()
+
+        await cursor.close()
+
+        return [
+            row[0]
+            for row in rows
+        ]
+
 
 async def get_expired_subscriptions():
     async with aiosqlite.connect(DB_NAME) as db:
