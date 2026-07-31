@@ -32,6 +32,7 @@ from config import TOKEN, PRICE_USDT
 from content_manager import content_manager
 from cryptopay import create_invoice
 from market import get_full_market
+from datetime import datetime, timezone
 
 
 # ==========================================================
@@ -102,7 +103,15 @@ async def premium_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user = await get_user(user_id)
 
-    if user and user[4] and user[3]:
+    if (
+    user
+    and user[4]
+    and user[3]
+    and datetime.fromisoformat(
+        user[3]
+    ).replace(
+        tzinfo=timezone.utc
+    ) > datetime.now(timezone.utc)):
 
         subscription_end = user[3]
 
