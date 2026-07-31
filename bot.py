@@ -3,8 +3,6 @@ import threading
 
 from datetime import datetime, timezone
 
-from web import run_web
-
 from telegram import (
     Update,
     InlineKeyboardButton,
@@ -20,84 +18,117 @@ from telegram.ext import (
     filters,
 )
 
-from database import (
-    init_db,
-    add_invoice,
-    add_user,
-    get_user,
-    save_suggestion,
-)
-
-from checker import payment_checker
-
 from config import (
     TOKEN,
     PRICE_USDT,
     ADMIN_ID,
 )
 
-from content_manager import content_manager
+from database import (
+    init_db,
+    add_user,
+    get_user,
+    get_language,
+    update_language,
+    save_suggestion,
+    add_invoice,
+)
+
+from languages import get_text
+
 from cryptopay import create_invoice
+
 from market import get_full_market
 
+from checker import payment_checker
+
+from content_manager import content_manager
+
+from web import run_web
+
 
 
 # =========================
-# MENU
+# LANGUAGE MENU
 # =========================
 
-def main_menu():
 
-    keyboard = [
-
-        [
-            InlineKeyboardButton(
-                "💎 Premium",
-                callback_data="premium"
-            )
-        ],
-
-        [
-            InlineKeyboardButton(
-                "💰 Курсы криптовалют",
-                callback_data="prices"
-            )
-        ],
-
-        [
-            InlineKeyboardButton(
-                "💡 Предложения",
-                callback_data="suggestions"
-            )
-        ],
-
-        [
-            InlineKeyboardButton(
-                "❓ FAQ",
-                callback_data="faq"
-            ),
-
-            InlineKeyboardButton(
-                "👤 Профиль",
-                callback_data="profile"
-            )
-        ]
-    ]
+def language_menu():
 
     return InlineKeyboardMarkup(
-        keyboard
+        [
+            [
+                InlineKeyboardButton(
+                    "🇷🇺 Русский",
+                    callback_data="lang_ru"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "🇬🇧 English",
+                    callback_data="lang_en"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "🇦🇪 العربية",
+                    callback_data="lang_ar"
+                )
+            ],
+        ]
     )
 
 
 
-def back_button(callback="back"):
+# =========================
+# MAIN MENU
+# =========================
+
+
+def main_menu(lang):
+
+    return InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton(
+                    "💎 Premium",
+                    callback_data="premium"
+                )
+            ],
+
+            [
+                InlineKeyboardButton(
+                    get_text(lang, "prices"),
+                    callback_data="prices"
+                )
+            ],
+
+            [
+                InlineKeyboardButton(
+                    get_text(lang, "settings"),
+                    callback_data="settings"
+                )
+            ],
+
+            [
+                InlineKeyboardButton(
+                    get_text(lang, "profile"),
+                    callback_data="profile"
+                )
+            ],
+        ]
+    )
+
+
+
+def back_button():
 
     return InlineKeyboardMarkup(
         [
             [
                 InlineKeyboardButton(
                     "🔙 Назад",
-                    callback_data=callback
+                    callback_data="back"
                 )
             ]
         ]
@@ -106,10 +137,14 @@ def back_button(callback="back"):
 
 
 # =========================
-# START
+# START COMMAND
 # =========================
 
-async def start(update: Update, context):
+
+async def start(
+        update: Update,
+        context: ContextTypes.DEFAULT_TYPE
+):
 
     user = update.effective_user
 
@@ -120,29 +155,476 @@ async def start(update: Update, context):
     )
 
 
+    language = await get_language(
+        user.id
+    )
+
+
+    if not language:
+
+        await update.message.reply_text(
+
+            "🌐 Выберите язык:\n\n"
+            "Choose language:\n\n"
+            "اختر اللغة:",
+
+            reply_markup=language_menu()
+
+        )
+
+        return
+
+
+
     await update.message.reply_text(
 
-        "🤖 <b>Bit Ref 4U</b>\n\n"
-        "Твой крипто-помощник.\n\n"
-        "Выбери раздел 👇",
+        get_text(
+            language,
+            "welcome"
+        ),
 
         parse_mode="HTML",
 
-        reply_markup=main_menu()
+        reply_markup=main_menu(
+            language
+        )
 
     )
 
 
 
 # =========================
-# PREMIUM
+# LANGUAGE CALLBACK
 # =========================
 
-async def premium_menu(update, context):
+
+async def language_callback(
+        update,
+        context
+):
 
     query = update.callback_query
 
     await query.answer()
+
+
+    lang = query.data.split("_")[1]
+
+
+    await update_language(
+
+        query.from_user.id,
+
+        lang
+
+    )
+
+
+    await query.edit_message_text(
+
+        get_text(
+            lang,
+            "welcome"
+        ),
+
+        parse_mode="HTML",
+
+        reply_markup=main_menu(
+            lang
+        )
+
+    )
+
+# =========================
+# SETTINGS MENU
+# =========================
+
+
+async def settings_callback(
+        update,
+        context
+):
+
+    query = update.callback_query
+
+    await query.answer()
+
+
+    lang = await get_language(
+        query.from_user.id
+    )
+
+
+    await query.edit_message_text(
+
+        get_text(
+            lang,
+            "settings"
+        ),
+
+        reply_markup=InlineKeyboardMarkup(
+
+            [
+
+                [
+
+                    InlineKeyboardButton(
+
+                        get_text(
+                            lang,
+                            "change_language"
+                        ),
+
+                        callback_data="change_language"
+
+                    )
+
+                ],
+
+                [
+
+                    InlineKeyboardButton(
+
+                        get_text(
+                            lang,
+                            "faq"
+                        ),
+
+                        callback_data="faq"
+
+                    )
+
+                ],
+
+                [
+
+                    InlineKeyboardButton(
+
+                        get_text(
+                            lang,
+                            "suggestions"
+                        ),
+
+                        callback_data="suggestions"
+
+                    )
+
+                ],
+
+                [
+
+                    InlineKeyboardButton(
+
+                        get_text(
+                            lang,
+                            "back"
+                        ),
+
+                        callback_data="back"
+
+                    )
+
+                ]
+
+            ]
+
+        )
+
+    )
+
+
+
+# =========================
+# CHANGE LANGUAGE
+# =========================
+
+
+async def change_language_callback(
+        update,
+        context
+):
+
+    query = update.callback_query
+
+    await query.answer()
+
+
+    await query.edit_message_text(
+
+        "🌐 Выберите язык:\n\n"
+        "Choose language:\n\n"
+        "اختر اللغة:",
+
+        reply_markup=language_menu()
+
+    )
+
+
+
+# =========================
+# FAQ
+# =========================
+
+
+async def faq_callback(
+        update,
+        context
+):
+
+    query = update.callback_query
+
+    await query.answer()
+
+
+    lang = await get_language(
+        query.from_user.id
+    )
+
+
+    if lang == "ru":
+
+        text = (
+
+            "❓ <b>FAQ</b>\n\n"
+
+            "💎 Premium открывает доступ "
+            "к закрытому каналу.\n\n"
+
+            "📅 Подписка действует 30 дней.\n\n"
+
+            "💰 Оплата производится в USDT."
+
+        )
+
+
+    elif lang == "en":
+
+        text = (
+
+            "❓ <b>FAQ</b>\n\n"
+
+            "💎 Premium gives access "
+            "to the private channel.\n\n"
+
+            "📅 Subscription lasts 30 days.\n\n"
+
+            "💰 Payment is made in USDT."
+
+        )
+
+
+    else:
+
+        text = (
+
+            "❓ <b>الأسئلة الشائعة</b>\n\n"
+
+            "💎 Premium يمنحك الوصول "
+            "إلى القناة الخاصة.\n\n"
+
+            "📅 الاشتراك لمدة 30 يوماً.\n\n"
+
+            "💰 الدفع يتم بواسطة USDT."
+
+        )
+
+
+
+    await query.edit_message_text(
+
+        text,
+
+        parse_mode="HTML",
+
+        reply_markup=back_button()
+
+    )
+
+
+
+# =========================
+# SUGGESTIONS
+# =========================
+
+
+async def suggestions_callback(
+        update,
+        context
+):
+
+    query = update.callback_query
+
+    await query.answer()
+
+
+    lang = await get_language(
+        query.from_user.id
+    )
+
+
+    context.user_data[
+        "waiting_suggestion"
+    ] = True
+
+
+
+    await query.edit_message_text(
+
+        get_text(
+            lang,
+            "suggestion_text"
+        ),
+
+        parse_mode="HTML",
+
+        reply_markup=InlineKeyboardMarkup(
+
+            [
+
+                [
+
+                    InlineKeyboardButton(
+
+                        get_text(
+                            lang,
+                            "cancel"
+                        ),
+
+                        callback_data="cancel_suggestion"
+
+                    )
+
+                ]
+
+            ]
+
+        )
+
+    )
+
+
+
+async def cancel_suggestion(
+        update,
+        context
+):
+
+    query = update.callback_query
+
+    await query.answer()
+
+
+    context.user_data[
+        "waiting_suggestion"
+    ] = False
+
+
+    lang = await get_language(
+        query.from_user.id
+    )
+
+
+    await query.edit_message_text(
+
+        get_text(
+            lang,
+            "welcome"
+        ),
+
+        parse_mode="HTML",
+
+        reply_markup=main_menu(
+            lang
+        )
+
+    )
+
+
+async def receive_suggestion(
+        update,
+        context
+):
+
+    if not context.user_data.get(
+        "waiting_suggestion"
+    ):
+
+        return
+
+
+    context.user_data[
+        "waiting_suggestion"
+    ] = False
+
+
+    user = update.effective_user
+
+
+    await save_suggestion(
+
+        user.id,
+
+        user.username,
+
+        update.message.text
+
+    )
+
+
+    await context.bot.send_message(
+
+        chat_id=ADMIN_ID,
+
+        text=(
+
+            "💡 <b>Новое предложение</b>\n\n"
+
+            f"👤 @{user.username}\n"
+
+            f"🆔 {user.id}\n\n"
+
+            f"💬 {update.message.text}"
+
+        ),
+
+        parse_mode="HTML"
+
+    )
+
+
+    lang = await get_language(
+        user.id
+    )
+
+
+    await update.message.reply_text(
+
+        "✅ Спасибо!",
+
+        reply_markup=main_menu(
+            lang
+        )
+
+    )
+
+# =========================
+# PREMIUM MENU
+# =========================
+
+
+async def premium_callback(
+        update,
+        context
+):
+
+    query = update.callback_query
+
+    await query.answer()
+
+
+    lang = await get_language(
+        query.from_user.id
+    )
 
 
     user = await get_user(
@@ -150,28 +632,21 @@ async def premium_menu(update, context):
     )
 
 
-    active = False
+    status = False
 
 
-    if user and user[4] and user[3]:
+    if user and user[3]:
 
         try:
 
-            end = datetime.fromisoformat(
+            end_date = datetime.fromisoformat(
                 user[3]
             )
 
 
-            if end.tzinfo is None:
+            if end_date > datetime.now():
 
-                end = end.replace(
-                    tzinfo=timezone.utc
-                )
-
-
-            if end > datetime.now(timezone.utc):
-
-                active = True
+                status = True
 
 
         except:
@@ -180,18 +655,15 @@ async def premium_menu(update, context):
 
 
 
-    if active:
+    if status:
 
         text = (
 
-            "💎 <b>Bit Ref 4U Premium</b>\n\n"
+            "💎 <b>Premium</b>\n\n"
 
             "✅ Подписка активна\n\n"
 
-            f"⏳ До:\n{user[3]}\n\n"
-
-            "🔒 Закрытый канал\n"
-            "🧩 Premium функции"
+            f"⏳ До: {user[3]}"
 
         )
 
@@ -199,10 +671,18 @@ async def premium_menu(update, context):
         keyboard = [
 
             [
+
                 InlineKeyboardButton(
-                    "🔙 Назад",
+
+                    get_text(
+                        lang,
+                        "back"
+                    ),
+
                     callback_data="back"
+
                 )
+
             ]
 
         ]
@@ -214,17 +694,15 @@ async def premium_menu(update, context):
 
             "💎 <b>Bit Ref 4U Premium</b>\n\n"
 
-            "Что входит:\n\n"
+            "🔒 Закрытый канал\n"
 
-            "🔒 Закрытый Premium канал\n"
+            "📊 Premium аналитика\n"
 
-            "🧩 Premium функции Mini App\n"
+            "🚀 Новые функции\n\n"
 
-            "🚀 Будущие обновления\n\n"
+            f"💰 Цена: {PRICE_USDT} USDT\n"
 
-            f"💰 Цена: <b>{PRICE_USDT} USDT</b>\n"
-
-            "📅 Срок: <b>30 дней</b>"
+            "📅 Срок: 30 дней"
 
         )
 
@@ -232,17 +710,30 @@ async def premium_menu(update, context):
         keyboard = [
 
             [
+
                 InlineKeyboardButton(
+
                     "💳 Купить",
+
                     callback_data="buy"
+
                 )
+
             ],
 
             [
+
                 InlineKeyboardButton(
-                    "🔙 Назад",
+
+                    get_text(
+                        lang,
+                        "back"
+                    ),
+
                     callback_data="back"
+
                 )
+
             ]
 
         ]
@@ -264,27 +755,25 @@ async def premium_menu(update, context):
 
 
 # =========================
-# BUY
+# BUY PREMIUM
 # =========================
 
-async def buy_callback(update, context):
+
+async def buy_callback(
+        update,
+        context
+):
 
     query = update.callback_query
 
     await query.answer()
 
 
-    user = query.from_user
-
-
     try:
 
         invoice = await create_invoice(
-
-            user_id=user.id,
-
+            user_id=query.from_user.id,
             amount=PRICE_USDT
-
         )
 
 
@@ -292,7 +781,7 @@ async def buy_callback(update, context):
 
             invoice["invoice_id"],
 
-            user.id,
+            query.from_user.id,
 
             PRICE_USDT,
 
@@ -305,11 +794,9 @@ async def buy_callback(update, context):
 
             "💳 <b>Счёт создан!</b>\n\n"
 
-            f"💰 Цена: {PRICE_USDT} USDT\n"
+            f"💰 Сумма: {PRICE_USDT} USDT\n\n"
 
-            "📅 Срок: 30 дней\n\n"
-
-            "Оплати по кнопке:",
+            "После оплаты доступ будет открыт автоматически.",
 
             parse_mode="HTML",
 
@@ -353,91 +840,30 @@ async def buy_callback(update, context):
 
         await query.edit_message_text(
 
-            f"❌ Ошибка создания оплаты:\n{e}"
+            f"❌ Ошибка создания счёта:\n{e}"
 
         )
 
 
 
 # =========================
-# PROFILE
+# CRYPTO PRICES
 # =========================
 
-async def profile_callback(update, context):
+
+async def prices_callback(
+        update,
+        context
+):
 
     query = update.callback_query
 
     await query.answer()
 
 
-    user = await get_user(
+    lang = await get_language(
         query.from_user.id
     )
-
-
-    username = (
-
-        f"@{query.from_user.username}"
-
-        if query.from_user.username
-
-        else "Не указан"
-
-    )
-
-
-    if user and user[4]:
-
-        status = "✅ Premium активен"
-
-        end = user[3] or "Неизвестно"
-
-
-    else:
-
-        status = "❌ Бесплатный"
-
-        end = "Нет подписки"
-
-
-
-    text = (
-
-        "👤 <b>Профиль</b>\n\n"
-
-        f"📱 Username: {username}\n"
-
-        f"🆔 ID: <code>{query.from_user.id}</code>\n\n"
-
-        f"💎 Статус: {status}\n"
-
-        f"⏳ Подписка до: {end}"
-
-    )
-
-
-
-    await query.edit_message_text(
-
-        text,
-
-        parse_mode="HTML",
-
-        reply_markup=back_button()
-
-    )
-
-
-
-# =========================
-# PRICES
-# =========================
-
-async def prices_callback(update, context):
-
-    query = update.callback_query
-
-    await query.answer()
 
 
     try:
@@ -447,7 +873,7 @@ async def prices_callback(update, context):
 
         text = (
 
-            "💰 <b>Курсы криптовалют</b>\n\n"
+            "💰 <b>Crypto Prices</b>\n\n"
 
             f"₿ BTC: <b>${market['btc_price']:,.2f}</b>\n"
 
@@ -460,9 +886,8 @@ async def prices_callback(update, context):
 
     except Exception:
 
-        text = (
-            "❌ Ошибка получения цен."
-        )
+
+        text = "❌ Не удалось получить цены"
 
 
 
@@ -492,7 +917,10 @@ async def prices_callback(update, context):
 
                     InlineKeyboardButton(
 
-                        "🔙 Назад",
+                        get_text(
+                            lang,
+                            "back"
+                        ),
 
                         callback_data="back"
 
@@ -509,141 +937,79 @@ async def prices_callback(update, context):
 
 
 # =========================
-# SUGGESTIONS
+# PROFILE
 # =========================
 
-async def suggestions_callback(update, context):
+
+async def profile_callback(
+        update,
+        context
+):
 
     query = update.callback_query
 
     await query.answer()
 
 
-    context.user_data[
-        "waiting_suggestion"
-    ] = True
+    lang = await get_language(
+        query.from_user.id
+    )
+
+
+    user = await get_user(
+        query.from_user.id
+    )
+
+
+    username = (
+
+        f"@{query.from_user.username}"
+
+        if query.from_user.username
+
+        else "None"
+
+    )
+
+
+    if user and user[3]:
+
+
+        status = "💎 Premium"
+
+
+        end = user[3]
+
+
+    else:
+
+
+        status = "🆓 Free"
+
+
+        end = "-"
+
+
+
+    text = (
+
+        f"{get_text(lang,'profile')}\n\n"
+
+        f"👤 Username: {username}\n"
+
+        f"🆔 ID: <code>{query.from_user.id}</code>\n\n"
+
+        f"📌 Status: {status}\n"
+
+        f"⏳ End: {end}"
+
+    )
 
 
 
     await query.edit_message_text(
 
-        "💡 <b>Предложения</b>\n\n"
-
-        "Напиши, что бы ты хотел добавить "
-        "или улучшить в Bit Ref 4U.\n\n"
-
-        "Сообщение будет отправлено разработчику.",
-
-        parse_mode="HTML",
-
-        reply_markup=InlineKeyboardMarkup(
-
-            [
-
-                [
-
-                    InlineKeyboardButton(
-
-                        "❌ Отмена предложения",
-
-                        callback_data="cancel_suggestion"
-
-                    )
-
-                ]
-
-            ]
-
-        )
-
-    )
-
-
-
-async def suggestion_handler(update, context):
-
-    if not context.user_data.get(
-        "waiting_suggestion"
-    ):
-
-        return
-
-
-
-    context.user_data[
-        "waiting_suggestion"
-    ] = False
-
-
-
-    user = update.effective_user
-
-
-
-    await save_suggestion(
-
-        user.id,
-
-        user.username,
-
-        update.message.text
-
-    )
-
-
-
-    await context.bot.send_message(
-
-        chat_id=ADMIN_ID,
-
-        text=(
-
-            "💡 <b>Новое предложение</b>\n\n"
-
-            f"👤 @{user.username}\n"
-
-            f"🆔 {user.id}\n\n"
-
-            f"💬 {update.message.text}"
-
-        ),
-
-        parse_mode="HTML"
-
-    )
-
-
-
-    await update.message.reply_text(
-
-        "✅ Спасибо! Предложение отправлено.",
-
-        reply_markup=main_menu()
-
-    )
-
-
-
-# =========================
-# FAQ
-# =========================
-
-async def faq_callback(update, context):
-
-    query = update.callback_query
-
-    await query.answer()
-
-
-    await query.edit_message_text(
-
-        "❓ <b>FAQ</b>\n\n"
-
-        "💎 Premium открывает закрытый канал.\n\n"
-
-        "📅 Подписка действует 30 дней.\n\n"
-
-        f"💰 Цена: {PRICE_USDT} USDT.",
+        text,
 
         parse_mode="HTML",
 
@@ -651,104 +1017,176 @@ async def faq_callback(update, context):
 
     )
 
-
-
 # =========================
-# CALLBACK
+# CALLBACK HANDLER
 # =========================
 
-async def button_handler(update, context):
+
+async def callback_handler(
+        update,
+        context
+):
 
     query = update.callback_query
 
-
-    if query.data == "premium":
-
-        await premium_menu(update, context)
+    data = query.data
 
 
-    elif query.data == "buy":
+    if data.startswith(
+        "lang_"
+    ):
 
-        await buy_callback(update, context)
+        await language_callback(
+            update,
+            context
+        )
 
-
-    elif query.data == "prices":
-
-        await prices_callback(update, context)
-
-
-    elif query.data == "profile":
-
-        await profile_callback(update, context)
+        return
 
 
-    elif query.data == "suggestions":
 
-        await suggestions_callback(update, context)
+    if data == "premium":
 
-
-    elif query.data == "cancel_suggestion":
-
-        context.user_data[
-            "waiting_suggestion"
-        ] = False
-
-
-        await query.answer()
-
-
-        await query.edit_message_text(
-
-            "🤖 <b>Bit Ref 4U</b>\n\n"
-            "Выбери раздел 👇",
-
-            parse_mode="HTML",
-
-            reply_markup=main_menu()
-
+        await premium_callback(
+            update,
+            context
         )
 
 
-    elif query.data == "faq":
+    elif data == "buy":
 
-        await faq_callback(update, context)
+        await buy_callback(
+            update,
+            context
+        )
 
 
-    elif query.data == "back":
+    elif data == "prices":
+
+        await prices_callback(
+            update,
+            context
+        )
+
+
+    elif data == "profile":
+
+        await profile_callback(
+            update,
+            context
+        )
+
+
+    elif data == "settings":
+
+        await settings_callback(
+            update,
+            context
+        )
+
+
+    elif data == "change_language":
+
+        await change_language_callback(
+            update,
+            context
+        )
+
+
+    elif data == "faq":
+
+        await faq_callback(
+            update,
+            context
+        )
+
+
+    elif data == "suggestions":
+
+        await suggestions_callback(
+            update,
+            context
+        )
+
+
+    elif data == "cancel_suggestion":
+
+        await cancel_suggestion(
+            update,
+            context
+        )
+
+
+    elif data == "back":
 
         await query.answer()
 
 
+        lang = await get_language(
+            query.from_user.id
+        )
+
+
         await query.edit_message_text(
 
-            "🤖 <b>Bit Ref 4U</b>\n\n"
-            "Выбери раздел 👇",
+            get_text(
+                lang,
+                "welcome"
+            ),
 
             parse_mode="HTML",
 
-            reply_markup=main_menu()
+            reply_markup=main_menu(
+                lang
+            )
 
         )
 
 
 
 # =========================
-# INIT
+# BOT STARTUP
 # =========================
 
-async def post_init(app):
+
+async def post_init(
+        application
+):
+
 
     await init_db()
 
 
+
     asyncio.create_task(
-        payment_checker(app)
+
+        payment_checker(
+            application
+        )
+
     )
 
 
+
     asyncio.create_task(
-        content_manager(app)
+
+        content_manager(
+            application
+        )
+
     )
+
+async def error_handler(
+        update,
+        context
+):
+
+    print(
+        "ERROR:",
+        context.error
+    )
+
+
 
 
 
@@ -756,47 +1194,62 @@ async def post_init(app):
 # MAIN
 # =========================
 
+
 def main():
 
-    app = (
+
+    application = (
 
         Application.builder()
 
-        .token(TOKEN)
+        .token(
+            TOKEN
+        )
 
-        .post_init(post_init)
+        .post_init(
+            post_init
+        )
 
         .build()
+        
 
     )
+    application.add_error_handler(error_handler)
 
+    application.add_handler(
 
-    app.add_handler(
         CommandHandler(
             "start",
             start
         )
+
     )
 
 
-    app.add_handler(
+
+    application.add_handler(
+
         CallbackQueryHandler(
-            button_handler
+            callback_handler
         )
+
     )
 
 
-    app.add_handler(
+
+    application.add_handler(
 
         MessageHandler(
 
-            filters.TEXT & ~filters.COMMAND,
+            filters.TEXT
+            & ~filters.COMMAND,
 
-            suggestion_handler
+            receive_suggestion
 
         )
 
     )
+
 
 
     threading.Thread(
@@ -810,12 +1263,79 @@ def main():
 
 
     print(
-        "Бот запущен!"
+        "Bit Ref 4U started"
     )
 
 
-    app.run_polling()
 
+    application.run_polling()
+
+
+# =========================
+# CHECK USER SUBSCRIPTION
+# =========================
+
+
+def check_subscription(
+        user
+):
+
+    if not user:
+
+        return False
+
+
+    try:
+
+        if user[3]:
+
+            end_date = datetime.fromisoformat(
+                user[3]
+            )
+
+
+            return end_date > datetime.now()
+
+
+    except:
+
+        return False
+
+
+
+    return False
+
+
+
+# =========================
+# ADMIN COMMAND
+# =========================
+
+
+async def admin_test(
+        update,
+        context
+):
+
+    user_id = update.effective_user.id
+
+
+    if user_id != ADMIN_ID:
+
+        return
+
+
+    await update.message.reply_text(
+
+        "✅ Admin доступ работает"
+
+    )
+
+
+
+# =========================
+# RUN
+# =========================
 
 
 if __name__ == "__main__":
