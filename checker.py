@@ -14,6 +14,7 @@ from database import (
     delete_invoice,
     add_user,
     activate_subscription,
+    get_user,
     get_expired_subscriptions,
     deactivate_subscription,
 )
@@ -34,8 +35,6 @@ async def payment_checker(app):
 
             for invoice_id, user_id in invoices:
 
-                # Если ссылка уже была отправлена —
-                # удаляем старый invoice
                 if await invite_sent(invoice_id):
                     await delete_invoice(invoice_id)
                     continue
@@ -48,45 +47,92 @@ async def payment_checker(app):
 
                     print(f"Invoice {invoice_id} paid.")
 
-                    # Помечаем invoice как оплаченный
                     await mark_paid(invoice_id)
 
                     # Регистрируем пользователя
                     await add_user(user_id)
 
-                    # Срок Premium — 30 дней
-                    subscription_start = datetime.now(timezone.utc)
-                    subscription_end = (
-                        subscription_start
-                        + timedelta(days=SUBSCRIPTION_DAYS)
-                    )
+                    # ==========================================
+                    # РАССЧИТЫВАЕМ СРОК PREMIUM
+                    # ==========================================
 
-                    # Активируем Premium
+                    now = datetime.now(timezone.utc)
+
+                    user = await get_user(user_id)
+
+                    # Если Premium ещё действует —
+                    # добавляем 30 дней к существующей подписке.
+                    if (
+                        user
+                        and user[4]
+                        and user[3]
+                    ):
+                        try:
+                            current_end = datetime.fromisoformat(
+                                user[3]
+                            )
+
+                            # Если дата без timezone
+                            if current_end.tzinfo is None:
+                                current_end = current_end.replace(
+                                    tzinfo=timezone.utc
+                                )
+
+                        except (ValueError, TypeError):
+                            current_end = now
+
+                        if current_end > now:
+                            subscription_start = now
+                            subscription_end = (
+                                current_end
+                                + timedelta(days=SUBSCRIPTION_DAYS)
+                            )
+                        else:
+                            subscription_start = now
+                            subscription_end = (
+                                now
+                                + timedelta(days=SUBSCRIPTION_DAYS)
+                            )
+
+                    else:
+                        subscription_start = now
+                        subscription_end = (
+                            now
+                            + timedelta(days=SUBSCRIPTION_DAYS)
+                        )
+
+                    # Активируем / продлеваем Premium
                     await activate_subscription(
                         user_id,
                         subscription_start,
                         subscription_end
                     )
 
-                    # Создаём одноразовую ссылку
+                    # ==========================================
+                    # СОЗДАЁМ ССЫЛКУ В КАНАЛ
+                    # ==========================================
+
                     invite = await app.bot.create_chat_invite_link(
                         chat_id=CHANNEL_ID,
                         member_limit=1,
                         creates_join_request=False
                     )
 
-                    # Отправляем пользователю ссылку
+                    # ==========================================
+                    # ОТПРАВЛЯЕМ ПОЛЬЗОВАТЕЛЮ
+                    # ==========================================
+
                     await app.bot.send_message(
                         chat_id=user_id,
                         text=(
                             "✅ Оплата получена!\n\n"
                             "💎 Bit Ref 4U Premium активирован!\n\n"
-                            f"📅 Срок подписки: {SUBSCRIPTION_DAYS} дней\n"
-                            f"⏳ До: "
+                            f"📅 Добавлено: {SUBSCRIPTION_DAYS} дней\n"
+                            f"⏳ Premium действует до: "
                             f"{subscription_end.strftime('%d.%m.%Y %H:%M')}\n\n"
-                            "🔒 Ваша ссылка в закрытый канал:\n\n"
+                            "🔒 Вход в закрытый канал:\n\n"
                             f"{invite.invite_link}\n\n"
-                            "⚠️ Ссылка действует только для одного входа."
+                            "⚠️ Ссылка предназначена только для вас."
                         )
                     )
 
@@ -101,7 +147,9 @@ async def payment_checker(app):
                     print(f"Telegram error: {e}")
 
                 except Exception as e:
-                    print(f"Invoice {invoice_id}: {e}")
+                    print(
+                        f"Invoice {invoice_id} processing error: {e}"
+                    )
 
             # ==========================================
             # ПРОВЕРКА ИСТЁКШИХ ПОДПИСОК
@@ -112,18 +160,35 @@ async def payment_checker(app):
             for user_id in expired_users:
 
                 try:
+                    # Удаляем пользователя из закрытого канала
+                    await app.bot.ban_chat_member(
+                        chat_id=CHANNEL_ID,
+                        user_id=user_id
+                    )
+
+                    # Сразу снимаем бан, чтобы пользователь
+                    # мог снова попасть в канал после новой оплаты.
+                    await app.bot.unban_chat_member(
+                        chat_id=CHANNEL_ID,
+                        user_id=user_id,
+                        only_if_banned=True
+                    )
+
+                    # Отключаем Premium
                     await deactivate_subscription(user_id)
 
                     print(
-                        f"Premium expired for user {user_id}"
+                        f"Premium expired and access removed "
+                        f"for user {user_id}"
                     )
 
                     await app.bot.send_message(
                         chat_id=user_id,
                         text=(
-                            "⏳ Ваша подписка Bit Ref 4U Premium "
-                            "истекла.\n\n"
-                            "Чтобы снова получить доступ к Premium, "
+                            "⏳ Ваша подписка "
+                            "Bit Ref 4U Premium истекла.\n\n"
+                            "🔒 Доступ к закрытому каналу отключён.\n\n"
+                            "💎 Чтобы снова получить доступ, "
                             "оформите новую подписку."
                         )
                     )
