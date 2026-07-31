@@ -554,3 +554,38 @@ async def activate_subscription(
         user_id,
         end_date.isoformat()
     )
+
+
+# =========================
+# EXPIRED SUBSCRIPTIONS
+# =========================
+
+async def get_expired_subscriptions():
+
+    from datetime import datetime
+
+    async with aiosqlite.connect(
+        DB_NAME
+    ) as db:
+
+        cursor = await db.execute(
+
+            """
+            SELECT user_id
+
+            FROM users
+
+            WHERE subscription_status = 'active'
+
+            AND subscription_end < ?
+
+            """,
+
+            (
+                datetime.now().isoformat(),
+            )
+
+        )
+
+
+        return await cursor.fetchall()
