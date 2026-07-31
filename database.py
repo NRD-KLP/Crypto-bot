@@ -657,3 +657,43 @@ async def mark_invite_sent(
 
 
         await db.commit()
+
+# =========================
+# CHECK INVITE SENT
+# =========================
+
+async def invite_sent(
+        invoice_id
+):
+
+    async with aiosqlite.connect(
+        DB_NAME
+    ) as db:
+
+        cursor = await db.execute(
+
+            """
+            SELECT invite_sent
+
+            FROM invoices
+
+            WHERE invoice_id = ?
+
+            """,
+
+            (
+                invoice_id,
+            )
+
+        )
+
+
+        result = await cursor.fetchone()
+
+
+        if result:
+
+            return result[0] == 1
+
+
+        return False
