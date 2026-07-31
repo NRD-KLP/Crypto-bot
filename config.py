@@ -3,7 +3,7 @@ import os
 TOKEN = os.getenv("TOKEN")
 CRYPTO_PAY_TOKEN = os.getenv("CRYPTO_PAY_TOKEN")
 
-PRICE_USDT = 10
+PRICE_USDT = 2
 
 # Вставишь сюда после того, как узнаем ID канала
 CHANNEL_ID = -1004323097981
