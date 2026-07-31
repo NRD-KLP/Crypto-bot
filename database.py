@@ -4,30 +4,41 @@ import aiosqlite
 DB_NAME = "users.db"
 
 
+
 async def init_db():
 
-    async with aiosqlite.connect(DB_NAME) as db:
+    async with aiosqlite.connect(
+        DB_NAME
+    ) as db:
 
-        await db.execute("""
+
+        await db.execute(
+
+            """
             CREATE TABLE IF NOT EXISTS users (
 
                 user_id INTEGER PRIMARY KEY,
+
                 username TEXT,
-
-                subscription_start TIMESTAMP,
-                subscription_end TIMESTAMP,
-
-                is_active INTEGER DEFAULT 0,
-                is_blocked INTEGER DEFAULT 0,
 
                 language TEXT DEFAULT 'ru',
 
+                subscription_status TEXT DEFAULT 'inactive',
+
+                subscription_end TIMESTAMP,
+
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
             )
-        """)
+            """
+
+        )
 
 
-        await db.execute("""
+
+        await db.execute(
+
+            """
             CREATE TABLE IF NOT EXISTS invoices (
 
                 invoice_id INTEGER PRIMARY KEY,
@@ -36,36 +47,44 @@ async def init_db():
 
                 amount REAL,
 
-                currency TEXT DEFAULT 'USDT',
+                currency TEXT,
 
                 status TEXT DEFAULT 'active',
 
                 invite_sent INTEGER DEFAULT 0,
 
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
             )
-        """)
+            """
+
+        )
 
 
-        await db.execute("""
-            CREATE TABLE IF NOT EXISTS payments (
+
+        await db.execute(
+
+            """
+            CREATE TABLE IF NOT EXISTS published_news (
 
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
 
-                user_id INTEGER,
+                news_url TEXT UNIQUE,
 
-                invoice_id INTEGER,
-
-                amount REAL,
-
-                currency TEXT,
+                channel TEXT,
 
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
             )
-        """)
+            """
+
+        )
 
 
-        await db.execute("""
+
+        await db.execute(
+
+            """
             CREATE TABLE IF NOT EXISTS suggestions (
 
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -77,57 +96,17 @@ async def init_db():
                 message TEXT,
 
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
             )
-        """)
+            """
 
+        )
 
-        await db.execute("""
-            CREATE TABLE IF NOT EXISTS referrals (
-
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-
-                user_id INTEGER,
-
-                referrer_id INTEGER,
-
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-
-
-        await db.execute("""
-            CREATE TABLE IF NOT EXISTS published_news (
-
-                link TEXT PRIMARY KEY,
-
-                channel TEXT NOT NULL,
-
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-
-
-        await db.execute("""
-            CREATE TABLE IF NOT EXISTS published_texts (
-
-                text TEXT PRIMARY KEY,
-
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-
-
-        await db.execute("""
-            CREATE TABLE IF NOT EXISTS settings (
-
-                key TEXT PRIMARY KEY,
-
-                value TEXT
-            )
-        """)
 
 
         await db.commit()
+
+
 
 
 
@@ -136,11 +115,18 @@ async def init_db():
 # =========================
 
 
-async def add_user(user_id, username=None):
+async def add_user(
+        user_id,
+        username=None
+):
 
-    async with aiosqlite.connect(DB_NAME) as db:
+    async with aiosqlite.connect(
+        DB_NAME
+    ) as db:
+
 
         await db.execute(
+
             """
             INSERT OR IGNORE INTO users
             (
@@ -149,384 +135,130 @@ async def add_user(user_id, username=None):
             )
 
             VALUES (?, ?)
+
             """,
+
             (
                 user_id,
                 username
             )
+
         )
+
 
         await db.commit()
 
 
 
-async def get_user(user_id):
-
-    async with aiosqlite.connect(DB_NAME) as db:
-
-        cursor = await db.execute(
-            """
-            SELECT
-
-            user_id,
-            username,
-            subscription_start,
-            subscription_end,
-            is_active,
-            is_blocked,
-            language
-
-            FROM users
-
-            WHERE user_id=?
-
-            """,
-            (user_id,)
-        )
-
-        row = await cursor.fetchone()
-
-        await cursor.close()
-
-        return row
 
 
-
-async def get_all_users():
-
-    async with aiosqlite.connect(DB_NAME) as db:
-
-        cursor = await db.execute(
-            """
-            SELECT
-
-            user_id,
-            username,
-            is_active,
-            subscription_end
-
-            FROM users
-            """
-        )
-
-        rows = await cursor.fetchall()
-
-        await cursor.close()
-
-        return rows
-
-
-
-async def activate_subscription(
-        user_id,
-        start,
-        end
+async def get_user(
+        user_id
 ):
 
-    async with aiosqlite.connect(DB_NAME) as db:
+    async with aiosqlite.connect(
+        DB_NAME
+    ) as db:
+
+
+        cursor = await db.execute(
+
+            """
+            SELECT *
+
+            FROM users
+
+            WHERE user_id = ?
+
+            """,
+
+            (
+                user_id,
+            )
+
+        )
+
+
+        return await cursor.fetchone()
+
+
+
+
+
+async def update_language(
+        user_id,
+        language
+):
+
+    async with aiosqlite.connect(
+        DB_NAME
+    ) as db:
+
 
         await db.execute(
+
             """
             UPDATE users
 
-            SET
+            SET language = ?
 
-            subscription_start=?,
-
-            subscription_end=?,
-
-            is_active=1
-
-            WHERE user_id=?
+            WHERE user_id = ?
 
             """,
+
             (
-                start,
-                end,
+                language,
                 user_id
             )
+
         )
+
 
         await db.commit()
 
 
 
-async def deactivate_subscription(user_id):
-
-    async with aiosqlite.connect(DB_NAME) as db:
-
-        await db.execute(
-            """
-            UPDATE users
-
-            SET is_active=0
-
-            WHERE user_id=?
-
-            """,
-            (user_id,)
-        )
-
-        await db.commit()
 
 
+async def get_language(
+        user_id
+):
 
-async def is_premium(user_id):
+    async with aiosqlite.connect(
+        DB_NAME
+    ) as db:
 
-    user = await get_user(user_id)
-
-    if not user:
-        return False
-
-    return bool(user[4])
-
-
-
-async def get_expired_subscriptions():
-
-    async with aiosqlite.connect(DB_NAME) as db:
 
         cursor = await db.execute(
+
             """
-            SELECT user_id
+            SELECT language
 
             FROM users
 
-            WHERE
-
-            is_active=1
-
-            AND
-
-            subscription_end < CURRENT_TIMESTAMP
-
-            """
-        )
-
-        rows = await cursor.fetchall()
-
-        await cursor.close()
-
-        return [
-            row[0]
-            for row in rows
-        ]
-
-
-
-async def block_user(user_id):
-
-    async with aiosqlite.connect(DB_NAME) as db:
-
-        await db.execute(
-            """
-            UPDATE users
-
-            SET is_blocked=1
-
-            WHERE user_id=?
+            WHERE user_id = ?
 
             """,
-            (user_id,)
-        )
-
-        await db.commit()
-
-
-
-async def unblock_user(user_id):
-
-    async with aiosqlite.connect(DB_NAME) as db:
-
-        await db.execute(
-            """
-            UPDATE users
-
-            SET is_blocked=0
-
-            WHERE user_id=?
-
-            """,
-            (user_id,)
-        )
-
-        await db.commit()
-
-
-
-async def is_blocked(user_id):
-
-    user = await get_user(user_id)
-
-    if not user:
-        return False
-
-    return bool(user[5])
-
-
-
-# =========================
-# INVOICES
-# =========================
-
-
-async def add_invoice(
-        invoice_id,
-        user_id,
-        amount=None,
-        currency="USDT"
-):
-
-    async with aiosqlite.connect(DB_NAME) as db:
-
-        await db.execute(
-            """
-            INSERT OR REPLACE INTO invoices
-
-            (
-                invoice_id,
-                user_id,
-                amount,
-                currency
-            )
-
-            VALUES (?, ?, ?, ?)
-
-            """,
-            (
-                invoice_id,
-                user_id,
-                amount,
-                currency
-            )
-        )
-
-        await db.commit()
-
-
-
-async def get_active_invoices():
-
-    async with aiosqlite.connect(DB_NAME) as db:
-
-        cursor = await db.execute(
-            """
-            SELECT
-
-            invoice_id,
-            user_id
-
-            FROM invoices
-
-            WHERE status='active'
-
-            """
-        )
-
-        rows = await cursor.fetchall()
-
-        await cursor.close()
-
-        return rows
-
-
-
-async def mark_paid(invoice_id):
-
-    async with aiosqlite.connect(DB_NAME) as db:
-
-        await db.execute(
-            """
-            UPDATE invoices
-
-            SET status='paid'
-
-            WHERE invoice_id=?
-
-            """,
-            (invoice_id,)
-        )
-
-        await db.commit()
-
-
-
-async def save_payment(
-        user_id,
-        invoice_id,
-        amount,
-        currency
-):
-
-    async with aiosqlite.connect(DB_NAME) as db:
-
-        await db.execute(
-            """
-            INSERT INTO payments
 
             (
                 user_id,
-                invoice_id,
-                amount,
-                currency
             )
 
-            VALUES (?, ?, ?, ?)
-
-            """,
-            (
-                user_id,
-                invoice_id,
-                amount,
-                currency
-            )
         )
 
-        await db.commit()
+
+        result = await cursor.fetchone()
 
 
 
-async def mark_invite_sent(invoice_id):
+        if result:
 
-    async with aiosqlite.connect(DB_NAME) as db:
-
-        await db.execute(
-            """
-            UPDATE invoices
-
-            SET invite_sent=1
-
-            WHERE invoice_id=?
-
-            """,
-            (invoice_id,)
-        )
-
-        await db.commit()
+            return result[0]
 
 
+        return "ru"
 
-async def invite_sent(invoice_id):
 
-    async with aiosqlite.connect(DB_NAME) as db:
-
-        cursor = await db.execute(
-            """
-            SELECT invite_sent
-
-            FROM invoices
-
-            WHERE invoice_id=?
-
-            """,
-            (invoice_id,)
-        )
-
-        row = await cursor.fetchone()
-
-        await cursor.close()
-
-        return bool(row[0]) if row else False
 
 
 
@@ -541,9 +273,13 @@ async def save_suggestion(
         message
 ):
 
-    async with aiosqlite.connect(DB_NAME) as db:
+    async with aiosqlite.connect(
+        DB_NAME
+    ) as db:
+
 
         await db.execute(
+
             """
             INSERT INTO suggestions
 
@@ -556,48 +292,167 @@ async def save_suggestion(
             VALUES (?, ?, ?)
 
             """,
+
             (
                 user_id,
                 username,
                 message
             )
+
         )
+
 
         await db.commit()
 
 
 
+
+
 # =========================
-# REFERRALS
+# INVOICES
 # =========================
 
 
-async def add_referral(
+async def add_invoice(
+        invoice_id,
         user_id,
-        referrer_id
+        amount,
+        currency
 ):
 
-    async with aiosqlite.connect(DB_NAME) as db:
+    async with aiosqlite.connect(
+        DB_NAME
+    ) as db:
+
 
         await db.execute(
+
             """
-            INSERT INTO referrals
+            INSERT INTO invoices
 
             (
+                invoice_id,
                 user_id,
-                referrer_id
+                amount,
+                currency
             )
 
-            VALUES (?, ?)
+            VALUES (?, ?, ?, ?)
 
             """,
+
             (
+                invoice_id,
                 user_id,
-                referrer_id
+                amount,
+                currency
             )
+
         )
 
+
         await db.commit()
+
+
+
+
+
+async def get_active_invoices():
+
+    async with aiosqlite.connect(
+        DB_NAME
+    ) as db:
+
+
+        cursor = await db.execute(
+
+            """
+            SELECT *
+
+            FROM invoices
+
+            WHERE status = 'active'
+
+            """
+
+        )
+
+
+        return await cursor.fetchall()
+
+
+
+
+
+async def mark_paid(
+        invoice_id
+):
+
+    async with aiosqlite.connect(
+        DB_NAME
+    ) as db:
+
+
+        await db.execute(
+
+            """
+            UPDATE invoices
+
+            SET status = 'paid'
+
+            WHERE invoice_id = ?
+
+            """,
+
+            (
+                invoice_id,
+            )
+
+        )
+
+
+        await db.commit()
+
+
+
+
+
+async def mark_subscription(
+        user_id,
+        end_date
+):
+
+    async with aiosqlite.connect(
+        DB_NAME
+    ) as db:
+
+
+        await db.execute(
+
+            """
+            UPDATE users
+
+            SET
+
+            subscription_status = 'active',
+
+            subscription_end = ?
+
+            WHERE user_id = ?
+
+            """,
+
+            (
+                end_date,
+                user_id
+            )
+
+        )
+
+
+        await db.commit()
+
+
 
 
 
@@ -606,62 +461,73 @@ async def add_referral(
 # =========================
 
 
-async def is_news_published(link, channel):
+async def is_news_published(
+        url,
+        channel
+):
 
-    async with aiosqlite.connect(DB_NAME) as db:
+    async with aiosqlite.connect(
+        DB_NAME
+    ) as db:
+
 
         cursor = await db.execute(
+
             """
-            SELECT 1
+            SELECT id
 
             FROM published_news
 
-            WHERE
+            WHERE news_url = ?
 
-            link=?
-
-            AND
-
-            channel=?
+            AND channel = ?
 
             """,
+
             (
-                link,
+                url,
                 channel
             )
+
         )
 
-        result = await cursor.fetchone()
 
-        await cursor.close()
+        return await cursor.fetchone() is not None
 
-        return result is not None
+
 
 
 
 async def save_published_news(
-        link,
+        url,
         channel
 ):
 
-    async with aiosqlite.connect(DB_NAME) as db:
+    async with aiosqlite.connect(
+        DB_NAME
+    ) as db:
+
 
         await db.execute(
+
             """
             INSERT OR IGNORE INTO published_news
 
             (
-                link,
+                news_url,
                 channel
             )
 
             VALUES (?, ?)
 
             """,
+
             (
-                link,
+                url,
                 channel
             )
+
         )
+
 
         await db.commit()
