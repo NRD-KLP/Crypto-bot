@@ -1,28 +1,20 @@
 import httpx
 
 
-
 COINGECKO_API = (
     "https://api.coingecko.com/api/v3"
 )
 
 
-
-async def get_price(
-        coin_id
-):
+async def get_price(coin_id):
 
     url = (
         f"{COINGECKO_API}/simple/price"
     )
 
-
     params = {
-
         "ids": coin_id,
-
         "vs_currencies": "usd"
-
     }
 
 
@@ -32,7 +24,6 @@ async def get_price(
             url,
             params=params
         )
-
 
         data = response.json()
 
@@ -53,16 +44,13 @@ async def get_full_market():
         "bitcoin"
     )
 
-
     eth = await get_price(
         "ethereum"
     )
 
-
     ton = await get_price(
         "the-open-network"
     )
-
 
 
     return {
