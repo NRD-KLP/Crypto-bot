@@ -1,48 +1,67 @@
 import feedparser
-from translator import translate
-from cleaner import clean_text
-from datetime import datetime, timezone
 
 
-COINDESK_RSS = "https://www.coindesk.com/arc/outboundfeeds/rss/"
-COINTELEGRAPH_RSS = "https://cointelegraph.com/rss"
+NEWS_SOURCES = [
+
+    "https://www.coindesk.com/arc/outboundfeeds/rss/",
+
+    "https://cointelegraph.com/rss"
+
+]
+
 
 
 def get_latest_news():
-    news = []
 
-    feeds = [COINDESK_RSS, COINTELEGRAPH_RSS]
+    news_list = []
 
-    for url in feeds:
-        feed = feedparser.parse(url)
 
-        for entry in feed.entries[:5]:
+    for source in NEWS_SOURCES:
 
-            published = getattr(entry, "published_parsed", None)
-        
-            if published:
-                published_time = datetime(
-                    *published[:6],
-                    tzinfo=timezone.utc
+        try:
+
+            feed = feedparser.parse(
+                source
+            )
+
+
+            for item in feed.entries[:5]:
+
+                news_list.append(
+
+                    {
+
+                        "title":
+                            item.get(
+                                "title",
+                                "Без заголовка"
+                            ),
+
+
+                        "description":
+                            item.get(
+                                "description",
+                                ""
+                            ),
+
+
+                        "link":
+                            item.get(
+                                "link",
+                                ""
+                            )
+
+                    }
+
                 )
-        
-                age = datetime.now(
-                    timezone.utc
-                ) - published_time
-        
-                if age.total_seconds() > 86400:
-                    continue
-        
-            news.append({
-                "title": clean_text(
-                    translate(entry.title)
-                ),
-                "description": clean_text(
-                    translate(
-                        getattr(entry, "summary", "")
-                    )
-                ),
-                "link": entry.link
-            })
-    return news
-    
+
+
+        except Exception as e:
+
+            print(
+                f"RSS error {source}: {e}"
+            )
+
+
+
+    return news_list
