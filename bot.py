@@ -31,6 +31,7 @@ from config import TOKEN, PRICE_USDT
 
 from content_manager import content_manager
 from cryptopay import create_invoice
+from market import get_full_market
 
 
 # ==========================================================
@@ -227,20 +228,65 @@ async def prices_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
-    await query.edit_message_text(
-        "💰 <b>Курсы криптовалют</b>\n\n"
-        "🚧 Функция будет подключена следующим этапом.",
-        parse_mode="HTML",
-        reply_markup=InlineKeyboardMarkup([
-            [
-                InlineKeyboardButton(
-                    "🔙 Назад",
-                    callback_data="back"
-                )
-            ]
-        ])
-    )
+    try:
+        market = await get_full_market()
 
+        btc_price = market["btc_price"]
+        btc_change = market["btc_change"]
+
+        eth_price = market["eth_price"]
+        eth_change = market["eth_change"]
+
+        fear_value = market["value"]
+        fear_classification = market["classification"]
+
+        btc_emoji = "🟢" if btc_change >= 0 else "🔴"
+        eth_emoji = "🟢" if eth_change >= 0 else "🔴"
+
+        text = (
+            "💰 <b>Крипторынок</b>\n\n"
+
+            f"₿ <b>BTC</b>\n"
+            f"${btc_price:,.2f}\n"
+            f"{btc_emoji} {btc_change:+.2f}% за 24ч\n\n"
+
+            f"Ξ <b>ETH</b>\n"
+            f"${eth_price:,.2f}\n"
+            f"{eth_emoji} {eth_change:+.2f}% за 24ч\n\n"
+
+            f"😨 <b>Fear & Greed</b>\n"
+            f"{fear_value} — {fear_classification}"
+        )
+
+    except Exception as e:
+
+        print(f"Market error: {e}")
+
+        text = (
+            "❌ <b>Не удалось получить данные рынка.</b>\n\n"
+            "Попробуй немного позже."
+        )
+
+    keyboard = [
+        [
+            InlineKeyboardButton(
+                "🔄 Обновить",
+                callback_data="prices"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "🔙 Назад",
+                callback_data="back"
+            )
+        ]
+    ]
+
+    await query.edit_message_text(
+        text,
+        parse_mode="HTML",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
 
 # ==========================================================
 # FAQ
