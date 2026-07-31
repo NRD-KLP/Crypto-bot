@@ -2,46 +2,111 @@ import re
 
 
 BAD_PHRASES = [
+
     "Read more",
     "Continue reading",
     "Continue Reading",
     "Read More",
     "Learn more",
     "Click here",
+    "Read the full story",
+    "Source:"
 ]
 
 
-def summarize(news):
-    title = news["title"].strip()
-    text = news.get("description", "")
+def clean_html(text):
 
-    if not text:
-        return f"<b>{title}</b>"
+    text = re.sub(
+        r"<.*?>",
+        "",
+        text
+    )
 
-    # Удаляем HTML
-    text = re.sub(r"<.*?>", "", text)
+    text = re.sub(
+        r"\s+",
+        " ",
+        text
+    )
 
-    # Убираем лишние пробелы
-    text = re.sub(r"\s+", " ", text).strip()
+    return text.strip()
 
-    # Удаляем мусорные фразы
+
+
+def remove_bad_phrases(text):
+
     for phrase in BAD_PHRASES:
-        text = text.replace(phrase, "")
 
-    # Убираем повтор заголовка из описания
+        text = text.replace(
+            phrase,
+            ""
+        )
+
+    return text.strip()
+
+
+
+def summarize(news):
+
+    title = news.get(
+        "title",
+        ""
+    )
+
+
+    description = news.get(
+        "description",
+        ""
+    )
+
+
+    if not description:
+
+        return title
+
+
+
+    text = clean_html(
+        description
+    )
+
+
+    text = remove_bad_phrases(
+        text
+    )
+
+
+    # убираем повтор заголовка
     if title.lower() in text.lower():
-        text = text[len(title):].lstrip(".: -")
 
-    # Красиво обрезаем
-    if len(text) > 350:
-        text = text[:350]
+        text = text.replace(
+            title,
+            ""
+        )
 
-        last_dot = text.rfind(".")
-        last_space = text.rfind(" ")
 
-        if last_dot > 200:
-            text = text[:last_dot + 1]
-        elif last_space > 200:
-            text = text[:last_space] + "..."
+    text = text.strip()
 
-    return f"<b>{title}</b>\n\n{text.strip()}"
+
+
+    # ограничение длины
+
+    if len(text) > 500:
+
+        text = text[:500]
+
+
+        last_space = text.rfind(
+            " "
+        )
+
+
+        if last_space > 300:
+
+            text = (
+                text[:last_space]
+                +
+                "..."
+            )
+
+
+    return text.strip()
