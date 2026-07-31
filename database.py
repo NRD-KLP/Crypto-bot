@@ -531,3 +531,26 @@ async def save_published_news(
 
 
         await db.commit()
+# =========================
+# SUBSCRIPTION
+# =========================
+
+
+async def activate_subscription(
+        user_id,
+        days=30
+):
+
+    from datetime import datetime, timedelta
+
+
+    end_date = (
+        datetime.now()
+        + timedelta(days=days)
+    )
+
+
+    await mark_subscription(
+        user_id,
+        end_date.isoformat()
+    )
