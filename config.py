@@ -1,23 +1,61 @@
 import os
 
-TOKEN = os.getenv("TOKEN")
-CRYPTO_PAY_TOKEN = os.getenv("CRYPTO_PAY_TOKEN")
 
+# =========================
+# TELEGRAM
+# =========================
+
+TOKEN = os.getenv(
+    "TOKEN"
+)
+
+CHANNEL_ID = int(
+    os.getenv(
+        "CHANNEL_ID"
+    )
+)
+
+
+# =========================
+# CRYPTO PAY
+# =========================
+
+CRYPTO_PAY_TOKEN = os.getenv(
+    "CRYPTO_PAY_TOKEN"
+)
+
+CRYPTO_PAY_API = (
+    "https://pay.crypt.bot/api"
+)
+
+
+# =========================
+# PREMIUM
+# =========================
+
+# Цена подписки
 PRICE_USDT = 2
 
-# Вставишь сюда после того, как узнаем ID канала
-CHANNEL_ID = -1004323097981
+# Срок подписки
+SUBSCRIPTION_DAYS = 30
 
 
-PRIVATE_POST_INTERVAL = 10800
+# =========================
+# ADMIN
+# =========================
 
-# Проверка оплаты каждые N секунд
+ADMIN_ID = 7961659998
+
+
+# =========================
+# POSTING
+# =========================
+
+PRIVATE_POST_INTERVAL = 7200
+
+
+# =========================
+# PAYMENT CHECK
+# =========================
+
 CHECK_INTERVAL = 5
-
-CRYPTO_PAY_API = "https://pay.crypt.bot/api"
-
-if TOKEN is None:
-    raise RuntimeError("Environment variable TOKEN is not set.")
-
-if CRYPTO_PAY_TOKEN is None:
-    raise RuntimeError("Environment variable CRYPTO_PAY_TOKEN is not set.")
