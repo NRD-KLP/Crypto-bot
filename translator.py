@@ -1,11 +1,32 @@
 from deep_translator import GoogleTranslator
 
 
-def translate(text):
+
+async def translate_text(
+        text: str,
+        language: str = "ru"
+):
+
     try:
-        return GoogleTranslator(
+
+        translator = GoogleTranslator(
             source="auto",
-            target="ru"
-        ).translate(text)
-    except Exception:
+            target=language
+        )
+
+
+        result = translator.translate(
+            text
+        )
+
+
+        return result
+
+
+    except Exception as e:
+
+        print(
+            f"Translation error: {e}"
+        )
+
         return text
