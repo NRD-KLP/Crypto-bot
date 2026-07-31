@@ -1,50 +1,76 @@
 import httpx
 
 
-URL = (
-    "https://api.coingecko.com/api/v3/simple/price"
-    "?ids=bitcoin,ethereum"
-    "&vs_currencies=usd"
-    "&include_24hr_change=true"
+
+COINGECKO_API = (
+    "https://api.coingecko.com/api/v3"
 )
 
 
-async def get_market_data():
-    async with httpx.AsyncClient(timeout=10) as client:
-        response = await client.get(URL)
-        response.raise_for_status()
+
+async def get_price(
+        coin_id
+):
+
+    url = (
+        f"{COINGECKO_API}/simple/price"
+    )
+
+
+    params = {
+
+        "ids": coin_id,
+
+        "vs_currencies": "usd"
+
+    }
+
+
+    async with httpx.AsyncClient() as client:
+
+        response = await client.get(
+            url,
+            params=params
+        )
+
 
         data = response.json()
 
-        return {
-            "btc_price": data["bitcoin"]["usd"],
-            "btc_change": round(data["bitcoin"]["usd_24h_change"], 2),
-            "eth_price": data["ethereum"]["usd"],
-            "eth_change": round(data["ethereum"]["usd_24h_change"], 2),
-        }
-        
-async def get_fear_greed():
-    url = "https://api.alternative.me/fng/"
 
-    async with httpx.AsyncClient(timeout=10) as client:
-        response = await client.get(url)
-        response.raise_for_status()
+    return data.get(
+        coin_id,
+        {}
+    ).get(
+        "usd",
+        0
+    )
 
-        data = response.json()
 
-        value = data["data"][0]["value"]
-        classification = data["data"][0]["value_classification"]
-
-        return {
-            "value": value,
-            "classification": classification
-        }
 
 async def get_full_market():
-    market = await get_market_data()
-    fear_greed = await get_fear_greed()
+
+    btc = await get_price(
+        "bitcoin"
+    )
+
+
+    eth = await get_price(
+        "ethereum"
+    )
+
+
+    ton = await get_price(
+        "the-open-network"
+    )
+
+
 
     return {
-        **market,
-        **fear_greed
+
+        "btc_price": btc,
+
+        "eth_price": eth,
+
+        "ton_price": ton
+
     }
