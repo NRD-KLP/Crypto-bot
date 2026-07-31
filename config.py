@@ -1,61 +1,103 @@
 import os
 
 
+def get_env(name: str, required=True):
+
+    value = os.getenv(name)
+
+    if required and not value:
+        raise RuntimeError(
+            f"Missing environment variable: {name}"
+        )
+
+    return value
+
+
+
 # =========================
 # TELEGRAM
 # =========================
 
-TOKEN = os.getenv(
+TOKEN = get_env(
     "TOKEN"
 )
 
-CHANNEL_ID = int(
+
+ADMIN_ID = int(
     os.getenv(
+        "ADMIN_ID",
+        "7961659998"
+    )
+)
+
+
+PRIVATE_CHANNEL_ID = int(
+    get_env(
         "CHANNEL_ID"
     )
 )
 
 
+
 # =========================
-# CRYPTO PAY
+# CRYPTOPAY
 # =========================
 
-CRYPTO_PAY_TOKEN = os.getenv(
+CRYPTO_PAY_TOKEN = get_env(
     "CRYPTO_PAY_TOKEN"
 )
+
 
 CRYPTO_PAY_API = (
     "https://pay.crypt.bot/api"
 )
 
 
+
 # =========================
 # PREMIUM
 # =========================
 
-# Цена подписки
-PRICE_USDT = 2
-
-# Срок подписки
-SUBSCRIPTION_DAYS = 30
-
-
-# =========================
-# ADMIN
-# =========================
-
-ADMIN_ID = 7961659998
+PRICE_USDT = float(
+    os.getenv(
+        "PRICE_USDT",
+        "2"
+    )
+)
 
 
-# =========================
-# POSTING
-# =========================
+SUBSCRIPTION_DAYS = int(
+    os.getenv(
+        "SUBSCRIPTION_DAYS",
+        "30"
+    )
+)
 
-PRIVATE_POST_INTERVAL = 7200
 
 
 # =========================
-# PAYMENT CHECK
+# INTERVALS
 # =========================
 
-CHECK_INTERVAL = 5
+PRIVATE_POST_INTERVAL = int(
+    os.getenv(
+        "PRIVATE_POST_INTERVAL",
+        "10800"
+    )
+)
+
+
+CHECK_INTERVAL = int(
+    os.getenv(
+        "CHECK_INTERVAL",
+        "10"
+    )
+)
+
+
+
+# =========================
+# DATABASE
+# =========================
+
+DB_NAME = "users.db"
