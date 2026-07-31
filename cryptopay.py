@@ -1,74 +1,139 @@
 import httpx
 
-from config import CRYPTO_PAY_API, CRYPTO_PAY_TOKEN
+from config import (
+    CRYPTO_PAY_TOKEN,
+    CRYPTO_PAY_API,
+)
+
+
 
 HEADERS = {
     "Crypto-Pay-API-Token": CRYPTO_PAY_TOKEN
 }
 
 
-class CryptoPayError(Exception):
-    pass
+
+async def create_invoice(
+        user_id: int,
+        amount: float,
+        currency: str = "USDT"
+):
+
+    url = (
+        f"{CRYPTO_PAY_API}/createInvoice"
+    )
 
 
-async def _request(method: str, payload: dict | None = None):
-    async with httpx.AsyncClient(timeout=30) as client:
+    payload = {
+        "asset": currency,
+        "amount": str(amount),
+
+        "description": (
+            f"Bit Ref 4U Premium "
+            f"30 days | User {user_id}"
+        )
+    }
+
+
+    async with httpx.AsyncClient() as client:
+
         response = await client.post(
-            f"{CRYPTO_PAY_API}/{method}",
+            url,
             headers=HEADERS,
-            json=payload or {}
+            json=payload
         )
 
-    if response.status_code != 200:
-        raise CryptoPayError(
-            f"HTTP {response.status_code}\n{response.text}"
-        )
 
-    try:
         data = response.json()
-    except Exception:
-        raise CryptoPayError("Crypto Pay returned invalid JSON.")
+
 
     if not data.get("ok"):
-        raise CryptoPayError(str(data))
 
-    return data["result"]
+        raise Exception(
+            data
+        )
 
 
-async def create_invoice(user_id: int, amount: float):
-    result = await _request(
-        "createInvoice",
-        {
-            "asset": "USDT",
-            "amount": amount,
-            "description": "Bit Ref 4U subscription",
-            "payload": str(user_id)
-        }
+    result = data["result"]
+
+
+    return {
+        "invoice_id": result["invoice_id"],
+
+        "pay_url": (
+            result.get(
+                "bot_invoice_url"
+            )
+            or
+            result.get(
+                "mini_app_invoice_url"
+            )
+        )
+    }
+
+
+
+async def get_invoice(
+        invoice_id: int
+):
+
+    url = (
+        f"{CRYPTO_PAY_API}/getInvoices"
     )
 
-    return result
+
+    params = {
+        "invoice_ids": invoice_id
+    }
 
 
-async def get_invoice(invoice_id: int):
-    result = await _request(
-        "getInvoices",
-        {
-            "invoice_ids": str(invoice_id)
-        }
-    )
+    async with httpx.AsyncClient() as client:
 
-    items = result.get("items", [])
+        response = await client.get(
+            url,
+            headers=HEADERS,
+            params=params
+        )
 
-    if not items:
+
+        data = response.json()
+
+
+    if not data.get("ok"):
+
+        raise Exception(
+            data
+        )
+
+
+    invoices = data["result"]["items"]
+
+
+    if not invoices:
+
         return None
 
-    return items[0]
+
+    return invoices[0]
 
 
-async def is_invoice_paid(invoice_id: int):
-    invoice = await get_invoice(invoice_id)
 
-    if invoice is None:
+async def is_invoice_paid(
+        invoice_id: int
+):
+
+    invoice = await get_invoice(
+        invoice_id
+    )
+
+
+    if not invoice:
+
         return False
 
-    return invoice.get("status") == "paid"
+
+    return (
+        invoice["status"]
+        ==
+        "paid"
+    )
