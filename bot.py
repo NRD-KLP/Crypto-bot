@@ -936,7 +936,7 @@ async def prices_callback(
             ]
 
         )
-        await query.answer("Загрузка...")
+        
 
     )
 
@@ -1033,12 +1033,12 @@ async def callback_handler(
         context
 ):
 
+    query = update.callback_query
+
     print(
         "CALLBACK:",
         query.data
     )
-
-    query = update.callback_query
 
     data = query.data
 
