@@ -1028,6 +1028,11 @@ async def callback_handler(
         context
 ):
 
+    print(
+        "CALLBACK:",
+        query.data
+    )
+
     query = update.callback_query
 
     data = query.data
@@ -1197,6 +1202,7 @@ async def error_handler(
 
 
 def main():
+    print("BOT BUILD: AUGUST NEW MENU")
     print("NEW MENU VERSION STARTED")
 
 
