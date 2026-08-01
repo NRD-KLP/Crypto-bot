@@ -936,9 +936,7 @@ async def prices_callback(
             ]
 
         )
-        await query.answer(
-    "Загрузка..."
-        )
+        await query.answer("Загрузка...")
 
     )
 
