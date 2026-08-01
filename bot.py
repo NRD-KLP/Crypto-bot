@@ -86,6 +86,7 @@ def language_menu():
 
 
 def main_menu(lang):
+    print("NEW MENU VERSION STARTED")
 
     return InlineKeyboardMarkup(
         [
