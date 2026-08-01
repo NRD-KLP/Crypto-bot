@@ -856,6 +856,7 @@ async def prices_callback(
         update,
         context
 ):
+    print("PRICES BUTTON CLICKED")
 
     query = update.callback_query
 
@@ -868,8 +869,11 @@ async def prices_callback(
 
 
     try:
+        print("REQUESTING MARKET")
 
         market = await get_full_market()
+
+        print("MARKET RECEIVED")
 
 
         text = (
@@ -931,6 +935,9 @@ async def prices_callback(
 
             ]
 
+        )
+        await query.answer(
+    "Загрузка..."
         )
 
     )
