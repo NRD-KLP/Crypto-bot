@@ -86,7 +86,7 @@ def language_menu():
 
 
 def main_menu(lang):
-    print("NEW MENU VERSION STARTED")
+    
 
     return InlineKeyboardMarkup(
         [
@@ -1197,6 +1197,7 @@ async def error_handler(
 
 
 def main():
+    print("NEW MENU VERSION STARTED")
 
 
     application = (
