@@ -1,4 +1,5 @@
 import asyncio
+import os
 import threading
 
 from datetime import datetime, timezone
@@ -52,7 +53,7 @@ from web import run_web
 # LANGUAGE MENU
 # =========================
 
-
+print("PROCESS ID:", os.getpid())
 def language_menu():
 
     return InlineKeyboardMarkup(
