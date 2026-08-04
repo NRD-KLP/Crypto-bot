@@ -46,7 +46,6 @@ import threading
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
-from urllib.parse import urlparse
 
 import aiosqlite
 import feedparser
@@ -142,7 +141,7 @@ async def init_db():
             CREATE TABLE IF NOT EXISTS users (
                 user_id INTEGER PRIMARY KEY,
                 username TEXT,
-                language TEXT DEFAULT 'ru',
+                language TEXT,
                 subscription_status TEXT DEFAULT 'inactive',
                 subscription_end TIMESTAMP,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -740,9 +739,9 @@ def remove_bad_phrases(text: str) -> str:
 
 
 FALLBACK_TEASERS = [
-    "Подробности материала — по ссылке ниже. Разбираем главное в полной версии статьи.",
-    "Короткого описания источник не дал — переходи по ссылке за деталями.",
-    "Материал без анонса от источника. Полный текст — по ссылке.",
+    "Свежий инфоповод на крипторынке — детали от источника пока не опубликованы, следим за реакцией цены.",
+    "Только что вышедшая новость. Разбор и влияние на рынок — в следующих обновлениях канала.",
+    "Событие может повлиять на настроение рынка в ближайшие часы — держим вас в курсе в этом канале.",
 ]
 
 
@@ -773,30 +772,27 @@ def summarize(news: dict, max_len: int = 500) -> str:
     return text.strip()
 
 
-def _domain_from_link(link: str) -> str:
-    try:
-        netloc = urlparse(link).netloc
-        return netloc.replace("www.", "") or "источник"
-    except Exception:
-        return "источник"
-
-
 def escape_html(text: str) -> str:
     return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
 def generate_private_post(news: dict) -> str:
     """ФИКС: заголовок (жирный, с эмодзи 📰) и описание (курсивом, отдельным
-    блоком) теперь визуально и содержательно различаются, плюс добавлен
-    источник — раньше пост выглядел как "заголовок / тот же заголовок"."""
+    блоком) теперь визуально и содержательно различаются — раньше пост
+    выглядел как "заголовок / тот же заголовок".
+
+    ВАЖНО: ссылка на источник и его домен намеренно НЕ публикуются в посте.
+    Раньше тизер для новостей без своего описания говорил "подробнее по
+    ссылке" и показывал домен источника (например coindesk.com) — это
+    фактически подсказывало подписчикам, где бесплатно прочитать ту же
+    новость, обесценивая платную подписку. Теперь весь контент поста
+    самодостаточен и никуда не отправляет читателя."""
     title = escape_html(news.get("title", "Без заголовка"))
     summary = escape_html(summarize(news))
-    source = escape_html(_domain_from_link(news.get("link", "")))
 
     return (
         f"📰 <b>{title}</b>\n\n"
         f"<i>{summary}</i>\n\n"
-        f"🔗 Источник: {source}\n"
         "💎 <i>Bit Ref 4U Premium</i>"
     )
 
@@ -958,6 +954,7 @@ TEXTS = {
             "💡 <b>Предложения</b>\n\nНапиши, что бы ты хотел добавить "
             "или улучшить в Bit Ref 4U.\n\nСообщение будет отправлено разработчику."
         ),
+        "suggestion_sent": "✅ Спасибо! Твоё предложение отправлено разработчику.",
         "cancel": "❌ Отмена",
         "premium_active": "✅ Premium активен",
         "premium_inactive": "❌ Бесплатный аккаунт",
@@ -968,6 +965,96 @@ TEXTS = {
         "fng": "😨 Индекс страха",
         "translated_news": "🌍 Новости на языке",
         "premium_required": "🔒 Эта функция доступна только Premium-подписчикам.",
+        "choose_language": "🌐 Выберите язык:\n\nChoose language:\n\nاختر اللغة:",
+        # --- premium ---
+        "premium_active_title": "💎 <b>Premium</b>",
+        "premium_active_status": "✅ Подписка активна",
+        "premium_active_until": "⏳ До: {end}",
+        "premium_offer_title": "💎 <b>Bit Ref 4U Premium</b>",
+        "premium_offer_features": (
+            "🔒 Закрытый канал с новостями и дайджестом рынка\n"
+            "📁 Трекер портфеля\n"
+            "🔔 Ценовые алерты\n"
+            "🔄 Конвертер валют\n"
+            "🌍 Новости на твоём языке"
+        ),
+        "premium_offer_price": "💰 Цена: {price} USDT",
+        "premium_offer_duration": "📅 Срок: {days} дней",
+        "buy_button": "💳 Купить",
+        # --- покупка / оплата ---
+        "invoice_created_title": "💳 <b>Счёт создан!</b>",
+        "invoice_created_amount": "💰 Сумма: {amount} USDT",
+        "invoice_created_note": "После оплаты доступ будет открыт автоматически.",
+        "pay_button": "💳 Оплатить",
+        "invoice_error": "❌ Не удалось создать счёт. Попробуйте ещё раз чуть позже.",
+        "payment_success_title": "🎉 <b>Оплата подтверждена!</b>",
+        "payment_success_desc": "💎 Bit Ref 4U Premium активирован.\n🔒 Доступ к закрытому каналу:",
+        "payment_success_duration": "⏳ Срок: {days} дней",
+        "subscription_expired": (
+            "⏳ <b>Premium закончился.</b>\n\n"
+            "Чтобы продолжить пользоваться Bit Ref 4U Premium — продлите подписку."
+        ),
+        # --- курсы / рынок ---
+        "prices_title": "💰 <b>Курсы криптовалют</b>",
+        "prices_error": "❌ Не удалось получить курсы. Источники временно недоступны, попробуйте обновить через минуту.",
+        "refresh_button": "🔄 Обновить",
+        "top_gainers": "🚀 <b>Топ роста (24ч)</b>",
+        "top_losers": "📉 <b>Топ падения (24ч)</b>",
+        "top_movers_error": "❌ Не удалось получить данные о движении рынка.",
+        "fng_title": "😨 <b>Индекс страха и жадности</b>",
+        "fng_value": "Значение: <b>{value}/100</b>",
+        "fng_status": "Статус: <b>{status}</b>",
+        "fng_error": "❌ Индекс сейчас недоступен, попробуйте позже.",
+        # --- профиль ---
+        "profile_username": "👤 Username: {username}",
+        "profile_id": "🆔 ID: <code>{id}</code>",
+        "profile_status": "📌 Статус: {status}",
+        "profile_end": "⏳ Действует до: {end}",
+        "profile_status_premium": "💎 Premium",
+        "profile_status_free": "🆓 Бесплатный",
+        # --- портфель ---
+        "portfolio_empty": "{title}\n\nПока пусто. Добавь первый актив 👇",
+        "portfolio_total": "\n💼 Итого: <b>${total}</b>",
+        "portfolio_add_button": "➕ Добавить актив",
+        "portfolio_clear_button": "🗑 Очистить портфель",
+        "portfolio_add_prompt": "➕ Отправь сообщение в формате:\n<code>BTC 0.5</code>\n\nДоступные монеты: {coins}",
+        "portfolio_add_invalid": "❌ Неверный формат. Пример: <code>BTC 0.5</code>\nДоступно: {coins}",
+        "portfolio_add_amount_invalid": "❌ Количество должно быть положительным числом.",
+        "portfolio_added": "✅ Добавлено: {amount} {symbol}",
+        # --- алерты ---
+        "alerts_empty": "{title}\n\nАктивных алертов нет.",
+        "alerts_add_button": "➕ Новый алерт",
+        "alerts_clear_button": "🗑 Удалить все",
+        "alerts_add_prompt": (
+            "🔔 Отправь сообщение в формате:\n"
+            "<code>BTC &gt; 70000</code> (уведомить, когда цена ВЫШЕ)\n"
+            "<code>BTC &lt; 60000</code> (уведомить, когда цена НИЖЕ)"
+        ),
+        "alerts_add_invalid": "❌ Неверный формат. Пример: <code>BTC &gt; 70000</code>",
+        "alerts_add_unknown_coin": "❌ Неизвестная монета. Доступно: {coins}",
+        "alerts_add_price_invalid": "❌ Не удалось распознать цену.",
+        "alerts_created": "🔔 Алерт создан: {symbol} {direction} ${price}",
+        "alerts_direction_above": "выше",
+        "alerts_direction_below": "ниже",
+        "alerts_triggered": (
+            "🔔 <b>Алерт сработал!</b>\n\n"
+            "{symbol} сейчас ${price} ({direction} цели ${target})"
+        ),
+        # --- конвертер ---
+        "convert_prompt": (
+            "🔄 Отправь сообщение в формате:\n"
+            "<code>0.5 BTC to ETH</code>\n"
+            "<code>100 USD to BTC</code>\n"
+            "<code>2 ETH to USD</code>"
+        ),
+        "convert_invalid": "❌ Неверный формат. Пример: <code>0.5 BTC to ETH</code>",
+        "convert_amount_invalid": "❌ Не удалось распознать количество.",
+        "convert_error": "❌ Не удалось выполнить конвертацию — проверь названия монет (доступно: {coins}, USD).",
+        "convert_result": "🔄 {amount} {from_symbol} ≈ <b>{result} {to_symbol}</b>",
+        # --- новости на языке ---
+        "news_preparing": "Готовлю новости…",
+        "news_translated_title": "🌍 <b>Bit Ref 4U — Новости</b>",
+        "news_translated_empty": "❌ Новостей пока нет.",
     },
     "en": {
         "welcome": "🤖 <b>Bit Ref 4U</b>\n\nYour crypto assistant.\n\nChoose a section 👇",
@@ -983,6 +1070,7 @@ TEXTS = {
             "💡 <b>Suggestions</b>\n\nWrite what you would like to add "
             "or improve in Bit Ref 4U.\n\nYour message will be sent to the developer."
         ),
+        "suggestion_sent": "✅ Thanks! Your suggestion has been sent to the developer.",
         "cancel": "❌ Cancel",
         "premium_active": "✅ Premium active",
         "premium_inactive": "❌ Free account",
@@ -993,6 +1081,96 @@ TEXTS = {
         "fng": "😨 Fear & Greed",
         "translated_news": "🌍 News in your language",
         "premium_required": "🔒 This feature is available to Premium subscribers only.",
+        "choose_language": "🌐 Выберите язык:\n\nChoose language:\n\nاختر اللغة:",
+        # --- premium ---
+        "premium_active_title": "💎 <b>Premium</b>",
+        "premium_active_status": "✅ Subscription active",
+        "premium_active_until": "⏳ Until: {end}",
+        "premium_offer_title": "💎 <b>Bit Ref 4U Premium</b>",
+        "premium_offer_features": (
+            "🔒 Private channel with news and market digest\n"
+            "📁 Portfolio tracker\n"
+            "🔔 Price alerts\n"
+            "🔄 Currency converter\n"
+            "🌍 News in your language"
+        ),
+        "premium_offer_price": "💰 Price: {price} USDT",
+        "premium_offer_duration": "📅 Duration: {days} days",
+        "buy_button": "💳 Buy",
+        # --- purchase / payment ---
+        "invoice_created_title": "💳 <b>Invoice created!</b>",
+        "invoice_created_amount": "💰 Amount: {amount} USDT",
+        "invoice_created_note": "Access will be granted automatically after payment.",
+        "pay_button": "💳 Pay",
+        "invoice_error": "❌ Couldn't create an invoice. Please try again shortly.",
+        "payment_success_title": "🎉 <b>Payment confirmed!</b>",
+        "payment_success_desc": "💎 Bit Ref 4U Premium activated.\n🔒 Access to the private channel:",
+        "payment_success_duration": "⏳ Duration: {days} days",
+        "subscription_expired": (
+            "⏳ <b>Premium has expired.</b>\n\n"
+            "To keep using Bit Ref 4U Premium — renew your subscription."
+        ),
+        # --- market ---
+        "prices_title": "💰 <b>Crypto Prices</b>",
+        "prices_error": "❌ Couldn't fetch prices. Sources are temporarily unavailable, please refresh in a minute.",
+        "refresh_button": "🔄 Refresh",
+        "top_gainers": "🚀 <b>Top gainers (24h)</b>",
+        "top_losers": "📉 <b>Top losers (24h)</b>",
+        "top_movers_error": "❌ Couldn't fetch market movers data.",
+        "fng_title": "😨 <b>Fear & Greed Index</b>",
+        "fng_value": "Value: <b>{value}/100</b>",
+        "fng_status": "Status: <b>{status}</b>",
+        "fng_error": "❌ Index is unavailable right now, try again later.",
+        # --- profile ---
+        "profile_username": "👤 Username: {username}",
+        "profile_id": "🆔 ID: <code>{id}</code>",
+        "profile_status": "📌 Status: {status}",
+        "profile_end": "⏳ Valid until: {end}",
+        "profile_status_premium": "💎 Premium",
+        "profile_status_free": "🆓 Free",
+        # --- portfolio ---
+        "portfolio_empty": "{title}\n\nEmpty for now. Add your first asset 👇",
+        "portfolio_total": "\n💼 Total: <b>${total}</b>",
+        "portfolio_add_button": "➕ Add asset",
+        "portfolio_clear_button": "🗑 Clear portfolio",
+        "portfolio_add_prompt": "➕ Send a message in the format:\n<code>BTC 0.5</code>\n\nAvailable coins: {coins}",
+        "portfolio_add_invalid": "❌ Invalid format. Example: <code>BTC 0.5</code>\nAvailable: {coins}",
+        "portfolio_add_amount_invalid": "❌ Amount must be a positive number.",
+        "portfolio_added": "✅ Added: {amount} {symbol}",
+        # --- alerts ---
+        "alerts_empty": "{title}\n\nNo active alerts.",
+        "alerts_add_button": "➕ New alert",
+        "alerts_clear_button": "🗑 Clear all",
+        "alerts_add_prompt": (
+            "🔔 Send a message in the format:\n"
+            "<code>BTC &gt; 70000</code> (notify when price is ABOVE)\n"
+            "<code>BTC &lt; 60000</code> (notify when price is BELOW)"
+        ),
+        "alerts_add_invalid": "❌ Invalid format. Example: <code>BTC &gt; 70000</code>",
+        "alerts_add_unknown_coin": "❌ Unknown coin. Available: {coins}",
+        "alerts_add_price_invalid": "❌ Couldn't parse the price.",
+        "alerts_created": "🔔 Alert created: {symbol} {direction} ${price}",
+        "alerts_direction_above": "above",
+        "alerts_direction_below": "below",
+        "alerts_triggered": (
+            "🔔 <b>Alert triggered!</b>\n\n"
+            "{symbol} is now ${price} ({direction} target ${target})"
+        ),
+        # --- converter ---
+        "convert_prompt": (
+            "🔄 Send a message in the format:\n"
+            "<code>0.5 BTC to ETH</code>\n"
+            "<code>100 USD to BTC</code>\n"
+            "<code>2 ETH to USD</code>"
+        ),
+        "convert_invalid": "❌ Invalid format. Example: <code>0.5 BTC to ETH</code>",
+        "convert_amount_invalid": "❌ Couldn't parse the amount.",
+        "convert_error": "❌ Couldn't convert — check the coin names (available: {coins}, USD).",
+        "convert_result": "🔄 {amount} {from_symbol} ≈ <b>{result} {to_symbol}</b>",
+        # --- translated news ---
+        "news_preparing": "Preparing the news…",
+        "news_translated_title": "🌍 <b>Bit Ref 4U — News</b>",
+        "news_translated_empty": "❌ No news right now.",
     },
     "ar": {
         "welcome": "🤖 <b>Bit Ref 4U</b>\n\nمساعد العملات الرقمية الخاص بك.\n\nاختر القسم 👇",
@@ -1008,6 +1186,7 @@ TEXTS = {
             "💡 <b>الاقتراحات</b>\n\nاكتب ما تريد إضافته أو تحسينه "
             "في Bit Ref 4U.\n\nسيتم إرسال رسالتك إلى المطور."
         ),
+        "suggestion_sent": "✅ شكراً! تم إرسال اقتراحك إلى المطور.",
         "cancel": "❌ إلغاء",
         "premium_active": "✅ Premium فعال",
         "premium_inactive": "❌ حساب مجاني",
@@ -1018,19 +1197,118 @@ TEXTS = {
         "fng": "😨 مؤشر الخوف والجشع",
         "translated_news": "🌍 الأخبار بلغتك",
         "premium_required": "🔒 هذه الميزة متاحة فقط لمشتركي Premium.",
+        "choose_language": "🌐 Выберите язык:\n\nChoose language:\n\nاختر اللغة:",
+        # --- premium ---
+        "premium_active_title": "💎 <b>Premium</b>",
+        "premium_active_status": "✅ الاشتراك فعال",
+        "premium_active_until": "⏳ حتى: {end}",
+        "premium_offer_title": "💎 <b>Bit Ref 4U Premium</b>",
+        "premium_offer_features": (
+            "🔒 قناة خاصة بالأخبار ودايجست السوق\n"
+            "📁 متتبع المحفظة\n"
+            "🔔 تنبيهات الأسعار\n"
+            "🔄 محول العملات\n"
+            "🌍 الأخبار بلغتك"
+        ),
+        "premium_offer_price": "💰 السعر: {price} USDT",
+        "premium_offer_duration": "📅 المدة: {days} يوماً",
+        "buy_button": "💳 شراء",
+        # --- الدفع ---
+        "invoice_created_title": "💳 <b>تم إنشاء الفاتورة!</b>",
+        "invoice_created_amount": "💰 المبلغ: {amount} USDT",
+        "invoice_created_note": "سيتم منح الوصول تلقائياً بعد الدفع.",
+        "pay_button": "💳 دفع",
+        "invoice_error": "❌ تعذر إنشاء الفاتورة. حاول مرة أخرى بعد قليل.",
+        "payment_success_title": "🎉 <b>تم تأكيد الدفع!</b>",
+        "payment_success_desc": "💎 تم تفعيل Bit Ref 4U Premium.\n🔒 الوصول إلى القناة الخاصة:",
+        "payment_success_duration": "⏳ المدة: {days} يوماً",
+        "subscription_expired": (
+            "⏳ <b>انتهى اشتراك Premium.</b>\n\n"
+            "لمواصلة استخدام Bit Ref 4U Premium — جدد اشتراكك."
+        ),
+        # --- السوق ---
+        "prices_title": "💰 <b>أسعار العملات الرقمية</b>",
+        "prices_error": "❌ تعذر جلب الأسعار. المصادر غير متاحة مؤقتاً، حاول التحديث بعد دقيقة.",
+        "refresh_button": "🔄 تحديث",
+        "top_gainers": "🚀 <b>الأكثر ارتفاعاً (24س)</b>",
+        "top_losers": "📉 <b>الأكثر انخفاضاً (24س)</b>",
+        "top_movers_error": "❌ تعذر جلب بيانات حركة السوق.",
+        "fng_title": "😨 <b>مؤشر الخوف والجشع</b>",
+        "fng_value": "القيمة: <b>{value}/100</b>",
+        "fng_status": "الحالة: <b>{status}</b>",
+        "fng_error": "❌ المؤشر غير متاح حالياً، حاول لاحقاً.",
+        # --- الملف الشخصي ---
+        "profile_username": "👤 اسم المستخدم: {username}",
+        "profile_id": "🆔 المعرف: <code>{id}</code>",
+        "profile_status": "📌 الحالة: {status}",
+        "profile_end": "⏳ صالح حتى: {end}",
+        "profile_status_premium": "💎 Premium",
+        "profile_status_free": "🆓 مجاني",
+        # --- المحفظة ---
+        "portfolio_empty": "{title}\n\nفارغة الآن. أضف أول أصل 👇",
+        "portfolio_total": "\n💼 الإجمالي: <b>${total}</b>",
+        "portfolio_add_button": "➕ إضافة أصل",
+        "portfolio_clear_button": "🗑 مسح المحفظة",
+        "portfolio_add_prompt": "➕ أرسل رسالة بالصيغة:\n<code>BTC 0.5</code>\n\nالعملات المتاحة: {coins}",
+        "portfolio_add_invalid": "❌ صيغة غير صحيحة. مثال: <code>BTC 0.5</code>\nالمتاح: {coins}",
+        "portfolio_add_amount_invalid": "❌ يجب أن تكون الكمية رقماً موجباً.",
+        "portfolio_added": "✅ تمت الإضافة: {amount} {symbol}",
+        # --- التنبيهات ---
+        "alerts_empty": "{title}\n\nلا توجد تنبيهات نشطة.",
+        "alerts_add_button": "➕ تنبيه جديد",
+        "alerts_clear_button": "🗑 حذف الكل",
+        "alerts_add_prompt": (
+            "🔔 أرسل رسالة بالصيغة:\n"
+            "<code>BTC &gt; 70000</code> (تنبيه عند الارتفاع فوق السعر)\n"
+            "<code>BTC &lt; 60000</code> (تنبيه عند الانخفاض دون السعر)"
+        ),
+        "alerts_add_invalid": "❌ صيغة غير صحيحة. مثال: <code>BTC &gt; 70000</code>",
+        "alerts_add_unknown_coin": "❌ عملة غير معروفة. المتاح: {coins}",
+        "alerts_add_price_invalid": "❌ تعذر التعرف على السعر.",
+        "alerts_created": "🔔 تم إنشاء التنبيه: {symbol} {direction} ${price}",
+        "alerts_direction_above": "أعلى من",
+        "alerts_direction_below": "أدنى من",
+        "alerts_triggered": (
+            "🔔 <b>تم تفعيل التنبيه!</b>\n\n"
+            "{symbol} الآن ${price} ({direction} الهدف ${target})"
+        ),
+        # --- المحول ---
+        "convert_prompt": (
+            "🔄 أرسل رسالة بالصيغة:\n"
+            "<code>0.5 BTC to ETH</code>\n"
+            "<code>100 USD to BTC</code>\n"
+            "<code>2 ETH to USD</code>"
+        ),
+        "convert_invalid": "❌ صيغة غير صحيحة. مثال: <code>0.5 BTC to ETH</code>",
+        "convert_amount_invalid": "❌ تعذر التعرف على الكمية.",
+        "convert_error": "❌ تعذر التحويل — تحقق من أسماء العملات (المتاح: {coins}, USD).",
+        "convert_result": "🔄 {amount} {from_symbol} ≈ <b>{result} {to_symbol}</b>",
+        # --- الأخبار بلغتك ---
+        "news_preparing": "جارٍ تحضير الأخبار…",
+        "news_translated_title": "🌍 <b>Bit Ref 4U — الأخبار</b>",
+        "news_translated_empty": "❌ لا توجد أخبار حالياً.",
     },
 }
 
 
-def get_text(language: str, key: str) -> str:
+def get_text(language: str, key: str, **kwargs) -> str:
     if language not in TEXTS:
         language = "ru"
-    return TEXTS[language].get(key, TEXTS["ru"].get(key, key))
+    template = TEXTS[language].get(key, TEXTS["ru"].get(key, key))
+    if kwargs:
+        try:
+            return template.format(**kwargs)
+        except (KeyError, IndexError):
+            return template
+    return template
 
 
 # =========================================================================
 # TELEGRAM UI — МЕНЮ
 # =========================================================================
+
+CHOOSE_LANGUAGE_TEXT = "🌐 Выберите язык:\n\nChoose language:\n\nاختر اللغة:"
+
 
 def language_menu() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
@@ -1071,8 +1349,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     language = await get_language(user.id)
     if not language:
+        # ФИКС: у новых пользователей language теперь NULL, а не 'ru' по
+        # умолчанию (раньше DEFAULT 'ru' в схеме означал, что этот экран
+        # никогда не показывался). Показываем выбор языка один раз при
+        # первом запуске, до входа в главное меню.
         await update.message.reply_text(
-            "🌐 Выберите язык:\n\nChoose language:\n\nاختر اللغة:",
+            CHOOSE_LANGUAGE_TEXT,
             reply_markup=language_menu(),
         )
         return
@@ -1120,9 +1402,34 @@ async def change_language_callback(update: Update, context: ContextTypes.DEFAULT
     query = update.callback_query
     await query.answer()
     await query.edit_message_text(
-        "🌐 Выберите язык:\n\nChoose language:\n\nاختر اللغة:",
+        CHOOSE_LANGUAGE_TEXT,
         reply_markup=language_menu(),
     )
+
+
+FAQ_TEXTS = {
+    "ru": (
+        "❓ <b>FAQ</b>\n\n"
+        "💎 Premium открывает доступ к закрытому каналу, портфелю, "
+        "алертам, конвертеру и дайджестам рынка.\n\n"
+        "📅 Подписка действует {days} дней.\n\n"
+        "💰 Оплата производится в USDT."
+    ),
+    "en": (
+        "❓ <b>FAQ</b>\n\n"
+        "💎 Premium unlocks the private channel, portfolio tracker, "
+        "price alerts, converter and market digests.\n\n"
+        "📅 Subscription lasts {days} days.\n\n"
+        "💰 Payment is made in USDT."
+    ),
+    "ar": (
+        "❓ <b>الأسئلة الشائعة</b>\n\n"
+        "💎 يمنحك Premium الوصول إلى القناة الخاصة والمحفظة والتنبيهات "
+        "والمحول ودايجست السوق.\n\n"
+        "📅 الاشتراك لمدة {days} يوماً.\n\n"
+        "💰 الدفع يتم بواسطة USDT."
+    ),
+}
 
 
 async def faq_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1130,32 +1437,10 @@ async def faq_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     lang = await get_language(query.from_user.id) or "ru"
 
-    texts = {
-        "ru": (
-            "❓ <b>FAQ</b>\n\n"
-            "💎 Premium открывает доступ к закрытому каналу, портфелю, "
-            "алертам, конвертеру и дайджестам рынка.\n\n"
-            f"📅 Подписка действует {SUBSCRIPTION_DAYS} дней.\n\n"
-            "💰 Оплата производится в USDT."
-        ),
-        "en": (
-            "❓ <b>FAQ</b>\n\n"
-            "💎 Premium unlocks the private channel, portfolio tracker, "
-            "price alerts, converter and market digests.\n\n"
-            f"📅 Subscription lasts {SUBSCRIPTION_DAYS} days.\n\n"
-            "💰 Payment is made in USDT."
-        ),
-        "ar": (
-            "❓ <b>الأسئلة الشائعة</b>\n\n"
-            "💎 يمنحك Premium الوصول إلى القناة الخاصة والمحفظة والتنبيهات "
-            "والمحول ودايجست السوق.\n\n"
-            f"📅 الاشتراك لمدة {SUBSCRIPTION_DAYS} يوماً.\n\n"
-            "💰 الدفع يتم بواسطة USDT."
-        ),
-    }
+    text = FAQ_TEXTS.get(lang, FAQ_TEXTS["ru"]).format(days=SUBSCRIPTION_DAYS)
 
     await query.edit_message_text(
-        texts.get(lang, texts["ru"]),
+        text,
         parse_mode="HTML",
         reply_markup=back_button("settings"),
     )
@@ -1201,10 +1486,11 @@ async def premium_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     active = is_premium_active(user)
 
     if active:
+        end_display = user["subscription_end"][:19].replace("T", " ")
         text = (
-            "💎 <b>Premium</b>\n\n"
-            "✅ Подписка активна\n\n"
-            f"⏳ До: {user['subscription_end'][:19].replace('T', ' ')}"
+            f"{get_text(lang, 'premium_active_title')}\n\n"
+            f"{get_text(lang, 'premium_active_status')}\n\n"
+            f"{get_text(lang, 'premium_active_until', end=end_display)}"
         )
         keyboard = [
             [InlineKeyboardButton(get_text(lang, "portfolio"), callback_data="portfolio")],
@@ -1215,17 +1501,13 @@ async def premium_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
     else:
         text = (
-            "💎 <b>Bit Ref 4U Premium</b>\n\n"
-            "🔒 Закрытый канал с новостями и дайджестом рынка\n"
-            "📁 Трекер портфеля\n"
-            "🔔 Ценовые алерты\n"
-            "🔄 Конвертер валют\n"
-            "🌍 Новости на твоём языке\n\n"
-            f"💰 Цена: {PRICE_USDT} USDT\n"
-            f"📅 Срок: {SUBSCRIPTION_DAYS} дней"
+            f"{get_text(lang, 'premium_offer_title')}\n\n"
+            f"{get_text(lang, 'premium_offer_features')}\n\n"
+            f"{get_text(lang, 'premium_offer_price', price=PRICE_USDT)}\n"
+            f"{get_text(lang, 'premium_offer_duration', days=SUBSCRIPTION_DAYS)}"
         )
         keyboard = [
-            [InlineKeyboardButton("💳 Купить", callback_data="buy")],
+            [InlineKeyboardButton(get_text(lang, "buy_button"), callback_data="buy")],
             [InlineKeyboardButton(get_text(lang, "back"), callback_data="back")],
         ]
 
@@ -1237,27 +1519,32 @@ async def premium_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def buy_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+    lang = await get_language(query.from_user.id) or "ru"
 
     try:
         invoice = await create_invoice(user_id=query.from_user.id, amount=PRICE_USDT)
         await add_invoice(invoice["invoice_id"], query.from_user.id, PRICE_USDT, "USDT")
 
+        text = (
+            f"{get_text(lang, 'invoice_created_title')}\n\n"
+            f"{get_text(lang, 'invoice_created_amount', amount=PRICE_USDT)}\n\n"
+            f"{get_text(lang, 'invoice_created_note')}"
+        )
+
         await query.edit_message_text(
-            "💳 <b>Счёт создан!</b>\n\n"
-            f"💰 Сумма: {PRICE_USDT} USDT\n\n"
-            "После оплаты доступ будет открыт автоматически.",
+            text,
             parse_mode="HTML",
             reply_markup=InlineKeyboardMarkup(
                 [
-                    [InlineKeyboardButton("💳 Оплатить", url=invoice["pay_url"])],
-                    [InlineKeyboardButton("🔙 Назад", callback_data="premium")],
+                    [InlineKeyboardButton(get_text(lang, "pay_button"), url=invoice["pay_url"])],
+                    [InlineKeyboardButton(get_text(lang, "back"), callback_data="premium")],
                 ]
             ),
         )
     except Exception as e:
         log.error("Invoice creation failed: %s", e)
         await query.edit_message_text(
-            "❌ Не удалось создать счёт. Попробуйте ещё раз чуть позже.",
+            get_text(lang, "invoice_error"),
             reply_markup=back_button("premium"),
         )
 
@@ -1271,7 +1558,7 @@ async def prices_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
         market = await get_full_market()
-        lines = ["💰 <b>Crypto Prices</b>\n"]
+        lines = [f"{get_text(lang, 'prices_title')}\n"]
         for symbol, info in SUPPORTED_COINS.items():
             coin = market.get(symbol)
             if not coin:
@@ -1284,14 +1571,14 @@ async def prices_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text = "\n".join(lines)
     except Exception as e:
         log.error("prices_callback failed: %s", e)
-        text = "❌ Не удалось получить курсы. Источники временно недоступны, попробуйте обновить через минуту."
+        text = get_text(lang, "prices_error")
 
     await query.edit_message_text(
         text,
         parse_mode="HTML",
         reply_markup=InlineKeyboardMarkup(
             [
-                [InlineKeyboardButton("🔄 Обновить", callback_data="prices")],
+                [InlineKeyboardButton(get_text(lang, "refresh_button"), callback_data="prices")],
                 [InlineKeyboardButton(get_text(lang, "back"), callback_data="back")],
             ]
         ),
@@ -1305,16 +1592,16 @@ async def top_movers_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     try:
         gainers, losers = await get_top_movers(5)
-        lines = ["🚀 <b>Топ роста (24ч)</b>"]
+        lines = [get_text(lang, "top_gainers")]
         for symbol, data in gainers:
             lines.append(f"🟢 {symbol}: {data['change_24h']:+.2f}%  (${format_price(data['price'])})")
-        lines.append("\n📉 <b>Топ падения (24ч)</b>")
+        lines.append(f"\n{get_text(lang, 'top_losers')}")
         for symbol, data in losers:
             lines.append(f"🔴 {symbol}: {data['change_24h']:+.2f}%  (${format_price(data['price'])})")
         text = "\n".join(lines)
     except Exception as e:
         log.error("top_movers_callback failed: %s", e)
-        text = "❌ Не удалось получить данные о движении рынка."
+        text = get_text(lang, "top_movers_error")
 
     await query.edit_message_text(
         text, parse_mode="HTML", reply_markup=back_button()
@@ -1324,19 +1611,20 @@ async def top_movers_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
 async def fng_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+    lang = await get_language(query.from_user.id) or "ru"
 
     fng = await get_fear_greed()
     if fng:
         bar_filled = round(fng["value"] / 10)
         bar = "🟩" * bar_filled + "⬜" * (10 - bar_filled)
         text = (
-            "😨 <b>Индекс страха и жадности</b>\n\n"
+            f"{get_text(lang, 'fng_title')}\n\n"
             f"{bar}\n\n"
-            f"Значение: <b>{fng['value']}/100</b>\n"
-            f"Статус: <b>{fng['classification']}</b>"
+            f"{get_text(lang, 'fng_value', value=fng['value'])}\n"
+            f"{get_text(lang, 'fng_status', status=fng['classification'])}"
         )
     else:
-        text = "❌ Индекс сейчас недоступен, попробуйте позже."
+        text = get_text(lang, "fng_error")
 
     await query.edit_message_text(text, parse_mode="HTML", reply_markup=back_button())
 
@@ -1355,18 +1643,18 @@ async def profile_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # что при статусе 'inactive' (непустая строка -> truthy) показывало
     # "Premium" даже неактивным пользователям.
     if is_premium_active(user):
-        status = "💎 Premium"
+        status = get_text(lang, "profile_status_premium")
         end = user["subscription_end"][:19].replace("T", " ")
     else:
-        status = "🆓 Free"
+        status = get_text(lang, "profile_status_free")
         end = "-"
 
     text = (
         f"{get_text(lang, 'profile')}\n\n"
-        f"👤 Username: {username}\n"
-        f"🆔 ID: <code>{query.from_user.id}</code>\n\n"
-        f"📌 Status: {status}\n"
-        f"⏳ End: {end}"
+        f"{get_text(lang, 'profile_username', username=username)}\n"
+        f"{get_text(lang, 'profile_id', id=query.from_user.id)}\n\n"
+        f"{get_text(lang, 'profile_status', status=status)}\n"
+        f"{get_text(lang, 'profile_end', end=end)}"
     )
 
     await query.edit_message_text(text, parse_mode="HTML", reply_markup=back_button())
@@ -1377,7 +1665,7 @@ async def profile_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def _portfolio_text_and_keyboard(user_id: int, lang: str):
     holdings = await get_portfolio(user_id)
     if not holdings:
-        text = f"{get_text(lang, 'portfolio')}\n\nПока пусто. Добавь первый актив 👇"
+        text = get_text(lang, "portfolio_empty", title=get_text(lang, "portfolio"))
     else:
         try:
             market = await get_full_market()
@@ -1391,13 +1679,13 @@ async def _portfolio_text_and_keyboard(user_id: int, lang: str):
             value = price * h["amount"]
             total += value
             lines.append(f"• {h['amount']:g} {h['symbol']} ≈ ${value:,.2f}")
-        lines.append(f"\n💼 Итого: <b>${total:,.2f}</b>")
+        lines.append(get_text(lang, "portfolio_total", total=f"{total:,.2f}"))
         text = "\n".join(lines)
 
     keyboard = InlineKeyboardMarkup(
         [
-            [InlineKeyboardButton("➕ Добавить актив", callback_data="portfolio_add")],
-            [InlineKeyboardButton("🗑 Очистить портфель", callback_data="portfolio_clear")],
+            [InlineKeyboardButton(get_text(lang, "portfolio_add_button"), callback_data="portfolio_add")],
+            [InlineKeyboardButton(get_text(lang, "portfolio_clear_button"), callback_data="portfolio_clear")],
             [InlineKeyboardButton(get_text(lang, "back"), callback_data="premium")],
         ]
     )
@@ -1421,15 +1709,15 @@ async def portfolio_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
 async def portfolio_add_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+    lang = await get_language(query.from_user.id) or "ru"
     context.user_data["state"] = "waiting_portfolio_add"
 
     coins = ", ".join(SUPPORTED_COINS.keys())
     await query.edit_message_text(
-        "➕ Отправь сообщение в формате:\n<code>BTC 0.5</code>\n\n"
-        f"Доступные монеты: {coins}",
+        get_text(lang, "portfolio_add_prompt", coins=coins),
         parse_mode="HTML",
         reply_markup=InlineKeyboardMarkup(
-            [[InlineKeyboardButton("❌ Отмена", callback_data="cancel_state")]]
+            [[InlineKeyboardButton(get_text(lang, "cancel"), callback_data="cancel_state")]]
         ),
     )
 
@@ -1449,18 +1737,21 @@ async def portfolio_clear_callback(update: Update, context: ContextTypes.DEFAULT
 async def _alerts_text_and_keyboard(user_id: int, lang: str):
     alerts = await get_user_alerts(user_id)
     if not alerts:
-        text = f"{get_text(lang, 'alerts')}\n\nАктивных алертов нет."
+        text = get_text(lang, "alerts_empty", title=get_text(lang, "alerts"))
     else:
         lines = [f"{get_text(lang, 'alerts')}\n"]
-        arrow = {"above": "выше", "below": "ниже"}
+        arrow = {
+            "above": get_text(lang, "alerts_direction_above"),
+            "below": get_text(lang, "alerts_direction_below"),
+        }
         for a in alerts:
             lines.append(f"• {a['symbol']} {arrow[a['direction']]} ${format_price(a['target_price'])}")
         text = "\n".join(lines)
 
     keyboard = InlineKeyboardMarkup(
         [
-            [InlineKeyboardButton("➕ Новый алерт", callback_data="alerts_add")],
-            [InlineKeyboardButton("🗑 Удалить все", callback_data="alerts_clear")],
+            [InlineKeyboardButton(get_text(lang, "alerts_add_button"), callback_data="alerts_add")],
+            [InlineKeyboardButton(get_text(lang, "alerts_clear_button"), callback_data="alerts_clear")],
             [InlineKeyboardButton(get_text(lang, "back"), callback_data="premium")],
         ]
     )
@@ -1484,15 +1775,14 @@ async def alerts_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def alerts_add_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+    lang = await get_language(query.from_user.id) or "ru"
     context.user_data["state"] = "waiting_alert_add"
 
     await query.edit_message_text(
-        "🔔 Отправь сообщение в формате:\n"
-        "<code>BTC &gt; 70000</code> (уведомить, когда цена ВЫШЕ)\n"
-        "<code>BTC &lt; 60000</code> (уведомить, когда цена НИЖЕ)",
+        get_text(lang, "alerts_add_prompt"),
         parse_mode="HTML",
         reply_markup=InlineKeyboardMarkup(
-            [[InlineKeyboardButton("❌ Отмена", callback_data="cancel_state")]]
+            [[InlineKeyboardButton(get_text(lang, "cancel"), callback_data="cancel_state")]]
         ),
     )
 
@@ -1521,13 +1811,10 @@ async def convert_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     context.user_data["state"] = "waiting_convert"
     await query.edit_message_text(
-        "🔄 Отправь сообщение в формате:\n"
-        "<code>0.5 BTC to ETH</code>\n"
-        "<code>100 USD to BTC</code>\n"
-        "<code>2 ETH to USD</code>",
+        get_text(lang, "convert_prompt"),
         parse_mode="HTML",
         reply_markup=InlineKeyboardMarkup(
-            [[InlineKeyboardButton("❌ Отмена", callback_data="cancel_state")]]
+            [[InlineKeyboardButton(get_text(lang, "cancel"), callback_data="cancel_state")]]
         ),
     )
 
@@ -1536,8 +1823,8 @@ async def convert_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def news_translated_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer("Готовлю новости…")
     lang = await get_language(query.from_user.id) or "ru"
+    await query.answer(get_text(lang, "news_preparing"))
     user = await get_user(query.from_user.id)
 
     if not is_premium_active(user):
@@ -1546,7 +1833,7 @@ async def news_translated_callback(update: Update, context: ContextTypes.DEFAULT
 
     news_list = get_latest_news(per_source=2)[:3]
     if not news_list:
-        await query.edit_message_text("❌ Новостей пока нет.", reply_markup=back_button("premium"))
+        await query.edit_message_text(get_text(lang, "news_translated_empty"), reply_markup=back_button("premium"))
         return
 
     blocks = []
@@ -1555,7 +1842,7 @@ async def news_translated_callback(update: Update, context: ContextTypes.DEFAULT
         summary = await translate_text(summarize(news), lang)
         blocks.append(f"📰 <b>{escape_html(title)}</b>\n<i>{escape_html(summary)}</i>")
 
-    text = "🌍 <b>Bit Ref 4U — News</b>\n\n" + "\n\n".join(blocks)
+    text = f"{get_text(lang, 'news_translated_title')}\n\n" + "\n\n".join(blocks)
     await query.edit_message_text(text, parse_mode="HTML", reply_markup=back_button("premium"))
 
 
@@ -1577,17 +1864,17 @@ async def receive_suggestion(update: Update, context: ContextTypes.DEFAULT_TYPE)
     )
 
     lang = await get_language(user.id) or "ru"
-    await update.message.reply_text("✅ Спасибо!", reply_markup=main_menu(lang))
+    await update.message.reply_text(get_text(lang, "suggestion_sent"), reply_markup=main_menu(lang))
 
 
 async def receive_portfolio_add(update: Update, context: ContextTypes.DEFAULT_TYPE):
     parts = update.message.text.strip().upper().split()
     lang = await get_language(update.effective_user.id) or "ru"
+    coins = ", ".join(SUPPORTED_COINS.keys())
 
     if len(parts) != 2 or parts[0] not in SUPPORTED_COINS:
-        coins = ", ".join(SUPPORTED_COINS.keys())
         await update.message.reply_text(
-            f"❌ Неверный формат. Пример: <code>BTC 0.5</code>\nДоступно: {coins}",
+            get_text(lang, "portfolio_add_invalid", coins=coins),
             parse_mode="HTML",
         )
         return
@@ -1597,14 +1884,14 @@ async def receive_portfolio_add(update: Update, context: ContextTypes.DEFAULT_TY
         if amount <= 0:
             raise ValueError
     except ValueError:
-        await update.message.reply_text("❌ Количество должно быть положительным числом.")
+        await update.message.reply_text(get_text(lang, "portfolio_add_amount_invalid"))
         return
 
     await add_holding(update.effective_user.id, parts[0], amount)
     context.user_data["state"] = None
 
     await update.message.reply_text(
-        f"✅ Добавлено: {amount:g} {parts[0]}",
+        get_text(lang, "portfolio_added", amount=f"{amount:g}", symbol=parts[0]),
         reply_markup=main_menu(lang),
     )
 
@@ -1618,7 +1905,7 @@ async def receive_alert_add(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if not match:
         await update.message.reply_text(
-            "❌ Неверный формат. Пример: <code>BTC &gt; 70000</code>",
+            get_text(lang, "alerts_add_invalid"),
             parse_mode="HTML",
         )
         return
@@ -1627,22 +1914,27 @@ async def receive_alert_add(update: Update, context: ContextTypes.DEFAULT_TYPE):
     symbol = symbol.upper()
     if symbol not in SUPPORTED_COINS:
         coins = ", ".join(SUPPORTED_COINS.keys())
-        await update.message.reply_text(f"❌ Неизвестная монета. Доступно: {coins}")
+        await update.message.reply_text(get_text(lang, "alerts_add_unknown_coin", coins=coins))
         return
 
     try:
         target_price = float(price_str.replace(",", "."))
     except ValueError:
-        await update.message.reply_text("❌ Не удалось распознать цену.")
+        await update.message.reply_text(get_text(lang, "alerts_add_price_invalid"))
         return
 
     direction = "above" if sign == ">" else "below"
     await add_alert(update.effective_user.id, symbol, target_price, direction)
     context.user_data["state"] = None
 
-    arrow = "выше" if direction == "above" else "ниже"
+    direction_text = get_text(
+        lang, "alerts_direction_above" if direction == "above" else "alerts_direction_below"
+    )
     await update.message.reply_text(
-        f"🔔 Алерт создан: {symbol} {arrow} ${format_price(target_price)}",
+        get_text(
+            lang, "alerts_created", symbol=symbol, direction=direction_text,
+            price=format_price(target_price),
+        ),
         reply_markup=main_menu(lang),
     )
 
@@ -1656,7 +1948,7 @@ async def receive_convert(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if not match:
         await update.message.reply_text(
-            "❌ Неверный формат. Пример: <code>0.5 BTC to ETH</code>",
+            get_text(lang, "convert_invalid"),
             parse_mode="HTML",
         )
         return
@@ -1665,22 +1957,26 @@ async def receive_convert(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         amount = float(amount_str.replace(",", "."))
     except ValueError:
-        await update.message.reply_text("❌ Не удалось распознать количество.")
+        await update.message.reply_text(get_text(lang, "convert_amount_invalid"))
         return
 
     result = await convert_amount(amount, from_symbol, to_symbol)
     context.user_data["state"] = None
 
     if result is None:
+        coins = ", ".join(SUPPORTED_COINS.keys())
         await update.message.reply_text(
-            "❌ Не удалось выполнить конвертацию — проверь названия монет "
-            f"(доступно: {', '.join(SUPPORTED_COINS.keys())}, USD).",
+            get_text(lang, "convert_error", coins=coins),
             reply_markup=main_menu(lang),
         )
         return
 
     await update.message.reply_text(
-        f"🔄 {amount:g} {from_symbol.upper()} ≈ <b>{result:,.6f} {to_symbol.upper()}</b>",
+        get_text(
+            lang, "convert_result",
+            amount=f"{amount:g}", from_symbol=from_symbol.upper(),
+            result=f"{result:,.6f}", to_symbol=to_symbol.upper(),
+        ),
         parse_mode="HTML",
         reply_markup=main_menu(lang),
     )
@@ -1770,20 +2066,17 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
 
 async def give_channel_access(app: Application, user_id: int) -> bool:
     try:
+        lang = await get_language(user_id) or "ru"
         invite_link = await app.bot.create_chat_invite_link(
             chat_id=PRIVATE_CHANNEL_ID, member_limit=1
         )
-        await app.bot.send_message(
-            chat_id=user_id,
-            text=(
-                "🎉 <b>Оплата подтверждена!</b>\n\n"
-                "💎 Bit Ref 4U Premium активирован.\n"
-                "🔒 Доступ к закрытому каналу:\n\n"
-                f"{invite_link.invite_link}\n\n"
-                f"⏳ Срок: {SUBSCRIPTION_DAYS} дней"
-            ),
-            parse_mode="HTML",
+        text = (
+            f"{get_text(lang, 'payment_success_title')}\n\n"
+            f"{get_text(lang, 'payment_success_desc')}\n\n"
+            f"{invite_link.invite_link}\n\n"
+            f"{get_text(lang, 'payment_success_duration', days=SUBSCRIPTION_DAYS)}"
         )
+        await app.bot.send_message(chat_id=user_id, text=text, parse_mode="HTML")
         return True
     except Exception as e:
         log.error("Invite error for user %s: %s", user_id, e)
@@ -1827,13 +2120,11 @@ async def remove_expired_users(app: Application):
 
     for user_id in expired:
         try:
+            lang = await get_language(user_id) or "ru"
             await deactivate_subscription(user_id)
             await app.bot.send_message(
                 chat_id=user_id,
-                text=(
-                    "⏳ <b>Premium закончился.</b>\n\n"
-                    "Чтобы продолжить пользоваться Bit Ref 4U Premium — продлите подписку."
-                ),
+                text=get_text(lang, "subscription_expired"),
                 parse_mode="HTML",
             )
         except Exception as e:
@@ -1926,15 +2217,18 @@ async def alert_checker_task(app: Application):
 
                     if triggered:
                         try:
-                            arrow = "выше" if alert["direction"] == "above" else "ниже"
+                            lang = await get_language(alert["user_id"]) or "ru"
+                            direction_text = get_text(
+                                lang,
+                                "alerts_direction_above" if alert["direction"] == "above" else "alerts_direction_below",
+                            )
+                            text = get_text(
+                                lang, "alerts_triggered",
+                                symbol=alert["symbol"], price=format_price(price),
+                                direction=direction_text, target=format_price(alert["target_price"]),
+                            )
                             await app.bot.send_message(
-                                chat_id=alert["user_id"],
-                                text=(
-                                    f"🔔 <b>Алерт сработал!</b>\n\n"
-                                    f"{alert['symbol']} сейчас ${format_price(price)} "
-                                    f"({arrow} цели ${format_price(alert['target_price'])})"
-                                ),
-                                parse_mode="HTML",
+                                chat_id=alert["user_id"], text=text, parse_mode="HTML"
                             )
                         finally:
                             await deactivate_alert(alert["id"])
