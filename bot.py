@@ -716,7 +716,7 @@ def get_latest_news(per_source: int = 5):
             for item in feed.entries[:per_source]:
                 news_list.append(
                     {
-                        "title": item.get("title", "Без заголовка"),
+                        "title": item.get("title", "No title"),
                         "description": _extract_raw_description(item),
                         "link": item.get("link", ""),
                     }
@@ -739,9 +739,9 @@ def remove_bad_phrases(text: str) -> str:
 
 
 FALLBACK_TEASERS = [
-    "Свежий инфоповод на крипторынке — детали от источника пока не опубликованы, следим за реакцией цены.",
-    "Только что вышедшая новость. Разбор и влияние на рынок — в следующих обновлениях канала.",
-    "Событие может повлиять на настроение рынка в ближайшие часы — держим вас в курсе в этом канале.",
+    "Fresh market update — the source hasn't published further details yet, we're watching how price reacts.",
+    "Just in. Breakdown and market impact will follow in upcoming channel updates.",
+    "This could move market sentiment over the next few hours — stay tuned to this channel for updates.",
 ]
 
 
@@ -787,7 +787,7 @@ def generate_private_post(news: dict) -> str:
     фактически подсказывало подписчикам, где бесплатно прочитать ту же
     новость, обесценивая платную подписку. Теперь весь контент поста
     самодостаточен и никуда не отправляет читателя."""
-    title = escape_html(news.get("title", "Без заголовка"))
+    title = escape_html(news.get("title", "No title"))
     summary = escape_html(summarize(news))
 
     return (
@@ -798,7 +798,7 @@ def generate_private_post(news: dict) -> str:
 
 
 def generate_analysis(news: dict) -> str:
-    title = escape_html(news.get("title", "Без заголовка"))
+    title = escape_html(news.get("title", "No title"))
     text = escape_html(summarize(news))
     return (
         "📊 <b>Анализ новости</b>\n\n"
