@@ -5,3 +5,4 @@ feedparser
 flask
 deep-translator
 gunicorn
+python-dotenv
